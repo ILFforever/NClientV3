@@ -1,8 +1,9 @@
 *.iml
+*.jks
 *.apk
 .gradle
 /local.properties
-/.idea
+.idea/
 output.json
 .DS_Store
 /build

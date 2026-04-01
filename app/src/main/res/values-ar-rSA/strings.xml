@@ -4,8 +4,6 @@
     <string name="setting_off_ignore_tags">سيُستعلم عن الوسوم الأخرى إذا اختير وسام من قائمة الأعمال</string>
     <string name="setting_on_use_account_tag">اِستخدم وسوم حسابك عند استعلام البحث (ستحظى الوسوم المحلية بالأولوية)</string>
     <string name="setting_off_use_account_tag">ستُتَجاهل وسوم حسابك عند الاستعلام</string>
-    <string name="theme_summary">اِختر لون السِّمة</string>
-    <string name="send_crash_report">أَرسل تقارير الأعطاب</string>
     <string name="change_theme">غيِّر السِّمة</string>
     <string name="clear_cache">اِمح الذاكرة الخبيئة</string>
     <string name="infinite_scroll">تمرير لامتناهي</string>
@@ -36,7 +34,7 @@
     <string name="only_japanese">اليابانية فقط</string>
     <string name="only_chinese">الصينية فقط</string>
     <string name="all_languages">كل اللغات</string>
-    <string name="unknown_language">Unknown language</string>
+    <string name="unknown_language">لغة غير معروفة</string>
     <string name="login">سجِّل دخولك</string>
     <string name="login_formatted" formatted="true">مُسجَّل بصفة %s</string>
     <string name="logout">سجِّل خروجك</string>
@@ -57,8 +55,6 @@
     <string name="image">صورة</string>
     <string name="next">التالي</string>
     <string name="create_pdf">أَنشئ مستندًا محمولًا PDF</string>
-    <string name="create_pdf_format" formatted="true">أَنشئ مستند \"%s\" المحمول</string>
-    <string name="create_zip_format" formatted="true">أَنشئ ملف \"%s\" المضغوط</string>
     <string name="created_pdf">تم إنشاء المستند المحمول بنجاح</string>
     <string name="error_pdf">طرأ خطأٌ أثناء إنشاء المستند المحمول</string>
     <string name="parsing_pages">تجزئة الصفحات</string>
@@ -71,8 +67,6 @@
     <string name="next_page">الصفحة التالية</string>
     <string name="downloaded_manga">الأعمال المُنزَّلة</string>
     <string name="download_gallery">نزِّل العمل</string>
-    <string name="delete_gallery_size_format" formatted="true">اِحذف العمل (%.2fMB)</string>
-    <string name="delete_gallery_format" formatted="true">أتودّ حذف العمل:\n%s ؟</string>
     <string name="share_with">شاركه مع</string>
     <string name="link_copied_to_clipboard">تم نسخ الرابط إلى الحافظة</string>
     <string name="open_in_browser">افتح في المُتصفِّح</string>
@@ -127,7 +121,7 @@
     <string name="send_comment">أَرسل التعليق…</string>
     <string name="profile_picture">صورة الملف الشخصي</string>
     <string name="send_bug_on_github">أَبلغ عن عيب في Github</string>
-    <string name="github">Github</string>
+    <string name="github">جيتهاب</string>
     <string name="install">ثبِّت</string>
     <string name="download_update_failed">تعذر تنزيل الإصدار المُحدَّث</string>
     <string name="copyURL">اِنسَخ الرابط</string>
@@ -155,9 +149,6 @@
     <string name="cancel">أَلغ</string>
     <string name="no">لا</string>
     <string name="yes">نعم</string>
-    <string name="start_all_downloads">اِبدأ كل التنزيلات</string>
-    <string name="pause_all_downloads">أَوقِف كل التنزيلات</string>
-    <string name="cancel_all_downloads">أَلغ كل التنزيلات</string>
     <string name="disable_lock_title">عطِّل إغلاق الشاشة أثناء القراءة</string>
     <string name="download_all_galleries_in_this_page">نزِّل كل الأعمال في هذه الصفحة</string>
     <string name="download_all_galleries">نزِّل كل الأعمال</string>
@@ -174,7 +165,6 @@
     <string name="start_page">صفحة البداية</string>
     <string name="end_page">صفحة النهاية</string>
     <string name="invalid_range_selected">النطاق المُختار غير صالح</string>
-    <string name="column_count_select">اِختر عدد الأعمدة</string>
     <string name="send_with_title">أتود إرساله بعنوانه؟</string>
     <string name="caption_send_with_title">أتود إلحاق الرابط بالصورة كوصف لها؟</string>
     <string name="history_size">حجم التأريخ</string>
@@ -187,14 +177,14 @@
     <string name="downloading_format">قيد التنزيل: %s</string>
     <string name="toggle_favorite">بدِّل التفضيل من عدمه</string>
     <string name="resume">اِستأنِف</string>
-    <string name="pause">أَوقِف</string>
     <string name="title_copied_to_clipboard">نُسخ العنوان إلى الحافظة</string>
     <string name="setting_zoom_one_column">فعِّل التقريب في وضع العمود الواحد داخل عمل</string>
     <string name="zoom_one_column">فعِّل التقريب</string>
     <string name="insert_pin">أَدخِل الرقم السري</string>
     <string name="confirm_pin">أَكد الرقم السري</string>
-    <string name="setting_pin">اُطلب الرقم السري عند الدخول إلى التطبيق</string>
-    <string name="use_pin">اِستخدم الرقم السري</string>
+    <string name="setting_device_credentials">Enable Device Credentials to enter the app</string>
+    <string name="setting_device_credentials_low_sdk">Only available for Android 11 or higher</string>
+    <string name="use_device_credentials">Use Device Credentials</string>
     <string name="wrong_pin">الرقم المُدخَل خاطئ</string>
     <string name="rotate_image">أَدر الصورة</string>
     <string name="toggle_online_favorite">بدِّل التفضيل من عدمه عبر الشابكة</string>
@@ -255,11 +245,11 @@
     <string name="title">العنوان</string>
     <string name="download_date">تاريخ التنزيل</string>
     <string name="page_count">عدد الصفحات</string>
-    <string name="size">الحجم</string>
+    <string name="artist">Artist</string>
+    <string name="group">Group</string>
     <string name="descending_order">تنازلي</string>
     <string name="minimum_comment_length" formatted="true">يجب أن يحوي تعليقك على %d حروف على الأقل</string>
     <string name="change_scroll_type">غيِّر نمط التمرير</string>
-    <string name="exported_backup_file_toast" formatted="true">صُدِّر ملف النسخ الاحتياطي إلى %s</string>
     <string name="export_data">صدِّر البيانات</string>
     <string name="import_data">اِستورد البيانات</string>
     <string name="default_status_1">قيد القراءة</string>
@@ -280,8 +270,6 @@
     <string name="requesting_storage_access">الولوج لوحدة التخزين مطلوب</string>
     <string name="request_storage_manager_summary">بسبب بعض قيود الولوج لوحدة التخزين في نظام أندرويد 11، سيُطلب منك منح أذونات إضافية للتطبيق تمكُّنًا من استخدام المسارات المُخصَّصة. إذا أردت منح هذه الأذونات فالمرجو منك تفعيل الإعداد في الشاشة التالية.</string>
     <string name="summary_beta">الانتقال إلى إصدار beta سيجعل من المستحيل عليك العودة إلى إصدار مُستقِر دون حذف التطبيق</string>
-    <string name="fix_inverted_title">أَصلِح الصور المقلوبة</string>
-    <string name="fix_inverted_summary">عليك بتفعيل هذا الإعداد إذا كانت ألوان الصور مقلوبة (في بعض الأجهزة، قد يؤدي إلى جعل سِمة الجهاز فاتحة، تعطيله سيُصلح هذه المشكلة)</string>
     <string name="navigation_settings_per_screen">إعدادات التنقُّل حسب الشاشة</string>
     <string name="downloaded_update_at" formatted="true">نُزِّل التحديث في %s</string>
     <string name="summary_offscreen_limit">عيِّن عدد الصور المراد تحميلها استباقيًّا خارج الشاشة أثناء قراءة عمل ما</string>
@@ -291,19 +279,20 @@
     <string name="summary_fetch_metadata">نزِّل البيانات الوصفية للأعمال المُنزَّلة قبل 2.3.0 والتي لا تحوي بيانات وصفية كالوسوم</string>
     <string name="title_fetch_metadata">اُجلُب البيانات الوصفية للأعمال القديمة</string>
     <string name="title_change_page_buttons">غيِّر الصفحة بالنقر على الصورة</string>
-    <string name="export_finished">Export finished</string>
-    <string name="import_finished">Import finished</string>
-    <string name="download_torrent">Download torrent</string>
-    <string name="title_activity_captcha">CAPTCHA</string>
-    <string name="invalid_response">Invalid response</string>
-    <string name="system_default">System default</string>
-    <string name="clear_cookies">Clear cookies</string>
-    <string name="fetching_cloudflare_token">Fetching Cloudflare token …</string>
+    <string name="export_finished">انتهى التصدير</string>
+    <string name="import_finished">انتهى الاستيراد</string>
+    <string name="download_torrent">تحميل التورنت</string>
+    <string name="system_default">الافتراضي للنظام</string>
+    <string name="clear_cookies">امح الكوكيز</string>
+    <string name="fetching_cloudflare_token">جاري جلب رمز Cloudflare...</string>
     <string name="exact_title_match_title">Exact tag match only</string>
     <string name="exact_title_match_summary">Hide galleries which would appear in the site but doesn\'t contains all the tags searched</string>
     <string name="hide">Hide</string>
     <string name="title_user_agent">Change User-Agent</string>
     <string name="shuffle_contentDescription">Random Gallery Button</string>
+    <string name="copy_logs">Copy logs to file</string>
+    <string name="copy_logs_summary">This will put all available logs of this App into a file. The available logs could extend multiple days. Also, it is possible that the logs contain personal information to be sure to check before publishing the file. Use this to attach logs to a Bug report.</string>
+    <string name="copy_logs_fail">Problem generating logfile</string>
     <string-array name="scroll_type">
         <item>أفقي</item>
         <item>عمودي</item>
@@ -311,10 +300,18 @@
     <string-array name="theme">
         <item>فاتحة</item>
         <item>داكنة</item>
+        <item>True Black</item>
     </string-array>
     <string-array name="title_type_array">
         <item>الإنجليزية</item>
         <item>اليابانية</item>
         <item>أنيق</item>
     </string-array>
+    <string name="online_blacklist_add_error">Error adding to online blacklist</string>
+    <string name="clipboard_settings_error">Error copying settings into clipboard</string>
+    <string name="send_image_error">Error creating Image to send</string>
+    <string name="unlock">Unlock</string>
+    <string name="auth_error">Authentication error</string>
+    <string name="auth_title">Biometric login for NClient</string>
+    <string name="auth_subtitle">Log in using your biometric credential</string>
 </resources>

@@ -30,6 +30,8 @@ import com.maxwai.nclientv3.settings.Global;
 import com.maxwai.nclientv3.settings.TagV2;
 import com.maxwai.nclientv3.utility.LogUtility;
 
+import org.json.JSONException;
+
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -50,23 +52,25 @@ public class Queries {
         return cursor.getColumnIndex(name);
     }
 
+    /**
+     * @noinspection unused
+     */
     public static class DebugDatabase {
-        /** @noinspection unused*/
         private static void dumpTable(String name, FileWriter sb) throws IOException {
 
             String query = "SELECT * FROM " + name;
-            Cursor c = db.rawQuery(query, null);
             sb.write("DUMPING: ");
             sb.write(name);
-            sb.write(" count: ");
-            sb.write("" + c.getCount());
-            sb.write(": ");
-            if (c.moveToFirst()) {
-                do {
-                    sb.write(DatabaseUtils.dumpCurrentRowToString(c));
-                } while (c.moveToNext());
+            try (Cursor c = db.rawQuery(query, null)) {
+                sb.write(" count: ");
+                sb.write("" + c.getCount());
+                sb.write(": ");
+                if (c.moveToFirst()) {
+                    do {
+                        sb.write(DatabaseUtils.dumpCurrentRowToString(c));
+                    } while (c.moveToNext());
+                }
             }
-            c.close();
             sb.append("END DUMPING\n");
         }
     }
@@ -107,24 +111,24 @@ public class Queries {
 
         static void clearGalleries() {
             db.delete(GalleryTable.TABLE_NAME, String.format(Locale.US,
-                "%s NOT IN (SELECT %s FROM %s) AND " +
                     "%s NOT IN (SELECT %s FROM %s) AND " +
-                    "%s NOT IN (SELECT %s FROM %s)",
-                GalleryTable.IDGALLERY, DownloadTable.ID_GALLERY, DownloadTable.TABLE_NAME,
-                GalleryTable.IDGALLERY, FavoriteTable.ID_GALLERY, FavoriteTable.TABLE_NAME,
-                GalleryTable.IDGALLERY, StatusMangaTable.GALLERY, StatusMangaTable.TABLE_NAME)
+                        "%s NOT IN (SELECT %s FROM %s) AND " +
+                        "%s NOT IN (SELECT %s FROM %s)",
+                    GalleryTable.IDGALLERY, DownloadTable.ID_GALLERY, DownloadTable.TABLE_NAME,
+                    GalleryTable.IDGALLERY, FavoriteTable.ID_GALLERY, FavoriteTable.TABLE_NAME,
+                    GalleryTable.IDGALLERY, StatusMangaTable.GALLERY, StatusMangaTable.TABLE_NAME)
                 , null);
             db.delete(GalleryBridgeTable.TABLE_NAME, String.format(Locale.US,
-                "%s NOT IN (SELECT %s FROM %s)",
-                GalleryBridgeTable.ID_GALLERY, GalleryTable.IDGALLERY, GalleryTable.TABLE_NAME)
+                    "%s NOT IN (SELECT %s FROM %s)",
+                    GalleryBridgeTable.ID_GALLERY, GalleryTable.IDGALLERY, GalleryTable.TABLE_NAME)
                 , null);
             db.delete(FavoriteTable.TABLE_NAME, String.format(Locale.US,
-                "%s NOT IN (SELECT %s FROM %s)",
-                FavoriteTable.ID_GALLERY, GalleryTable.IDGALLERY, GalleryTable.TABLE_NAME)
+                    "%s NOT IN (SELECT %s FROM %s)",
+                    FavoriteTable.ID_GALLERY, GalleryTable.IDGALLERY, GalleryTable.TABLE_NAME)
                 , null);
             db.delete(DownloadTable.TABLE_NAME, String.format(Locale.US,
-                "%s NOT IN (SELECT %s FROM %s)",
-                DownloadTable.ID_GALLERY, GalleryTable.IDGALLERY, GalleryTable.TABLE_NAME)
+                    "%s NOT IN (SELECT %s FROM %s)",
+                    DownloadTable.ID_GALLERY, GalleryTable.IDGALLERY, GalleryTable.TABLE_NAME)
                 , null);
         }
 
@@ -133,50 +137,52 @@ public class Queries {
          *
          * @param id id of the gallery to retrieve
          */
-        public static Gallery galleryFromId(int id) throws IOException {
-            Cursor cursor = db.query(true, TABLE_NAME, null, IDGALLERY + "=?", new String[]{"" + id}, null, null, null, null);
-            Gallery g = null;
-            if (cursor.moveToFirst()) {
-                g = cursorToGallery(cursor);
+        public static Gallery galleryFromId(Context context, int id) throws IOException {
+            try (Cursor cursor = db.query(true, TABLE_NAME, null, IDGALLERY + "=?", new String[]{"" + id}, null, null, null, null)) {
+                Gallery g = null;
+                if (cursor.moveToFirst()) {
+                    g = cursorToGallery(context, cursor);
+                }
+                return g;
             }
-            cursor.close();
-            return g;
         }
 
+        /**
+         * @return Cursor to favorite Table
+         * @noinspection DeprecatedIsStillUsed
+         * @deprecated This is only used to update an old database format to the newest one
+         */
         @Deprecated
         @NonNull
-        public static Cursor getAllFavoriteCursorDeprecated(CharSequence query, boolean online) {
-            LogUtility.i("FILTER IN: " + query + ";;" + online);
-            Cursor cursor;//=db.rawQuery(sql,new String[]{url,url,url,""+(online?2:1)});
+        public static Cursor getAllFavoriteCursorDeprecated() {
+            LogUtility.i("FILTER IN: %;;false");
             String sql = "SELECT * FROM " + TABLE_NAME + " WHERE (" +
                 FAVORITE + " =? OR " + FAVORITE + "=3)";
-            if (query != null && query.length() > 0) {
-                sql += " AND (" + TITLE_ENG + " LIKE ? OR " +
-                    TITLE_JP + " LIKE ? OR " +
-                    TITLE_PRETTY + " LIKE ? )";
-                String q = '%' + query.toString() + '%';
-                cursor = db.rawQuery(sql, new String[]{"" + (online ? 2 : 1), q, q, q});
-            } else cursor = db.rawQuery(sql, new String[]{"" + (online ? 2 : 1)});
+            sql += " AND (" + TITLE_ENG + " LIKE ? OR " +
+                TITLE_JP + " LIKE ? OR " +
+                TITLE_PRETTY + " LIKE ? )";
+            String q = "%%%";
+            Cursor cursor = db.rawQuery(sql, new String[]{"1", q, q, q});
             LogUtility.d(sql);
             LogUtility.d("AFTER FILTERING: " + cursor.getCount());
-            LogUtility.i("END FILTER IN: " + query + ";;" + online);
+            LogUtility.i("END FILTER IN: %;;false");
             return cursor;
         }
 
         /**
          * Retrieve all galleries inside the DB
          */
-        public static List<Gallery> getAllGalleries() throws IOException {
+        public static List<Gallery> getAllGalleries(Context context) throws IOException {
             String query = "SELECT * FROM " + TABLE_NAME;
-            Cursor cursor = db.rawQuery(query, null);
-            List<Gallery> galleries = new ArrayList<>(cursor.getCount());
-            if (cursor.moveToFirst()) {
-                do {
-                    galleries.add(cursorToGallery(cursor));
-                } while (cursor.moveToNext());
+            try (Cursor cursor = db.rawQuery(query, null)) {
+                List<Gallery> galleries = new ArrayList<>(cursor.getCount());
+                if (cursor.moveToFirst()) {
+                    do {
+                        galleries.add(cursorToGallery(context, cursor));
+                    } while (cursor.moveToNext());
+                }
+                return galleries;
             }
-            cursor.close();
-            return galleries;
         }
 
         public static void insert(GenericGallery gallery) {
@@ -205,11 +211,11 @@ public class Queries {
          * @param cursor Cursor to scroll
          * @return ArrayList of galleries
          */
-        static List<Gallery> cursorToList(Cursor cursor) throws IOException {
+        static List<Gallery> cursorToList(Context context, Cursor cursor) throws IOException {
             List<Gallery> galleries = new ArrayList<>(cursor.getCount());
             if (cursor.moveToFirst()) {
                 do {
-                    galleries.add(GalleryTable.cursorToGallery(cursor));
+                    galleries.add(GalleryTable.cursorToGallery(context, cursor));
                 } while (cursor.moveToNext());
             }
             return galleries;
@@ -225,8 +231,8 @@ public class Queries {
         /**
          * Convert a row of a cursor to a {@link Gallery}
          */
-        public static Gallery cursorToGallery(Cursor cursor) throws IOException {
-            return new Gallery(cursor, GalleryBridgeTable.getTagsForGallery(cursor.getInt(getColumnFromName(cursor, IDGALLERY))));
+        public static Gallery cursorToGallery(Context context, Cursor cursor) throws IOException {
+            return new Gallery(context, cursor, GalleryBridgeTable.getTagsForGallery(cursor.getInt(getColumnFromName(cursor, IDGALLERY))));
         }
 
         /**
@@ -247,7 +253,9 @@ public class Queries {
 
     public static class TagTable {
         public static final String TABLE_NAME = "Tags";
-        /** @noinspection unused*/
+        /**
+         * @noinspection unused
+         */
         public static final String DROP_TABLE = "DROP TABLE IF EXISTS " + TABLE_NAME;
         static final String CREATE_TABLE = "CREATE TABLE IF NOT EXISTS `Tags` (" +
             " `idTag` INT  NOT NULL PRIMARY KEY," +
@@ -282,15 +290,16 @@ public class Queries {
          * The {@link Cursor} passed as parameter is closed
          */
         private static List<Tag> getTagsFromCursor(Cursor cursor) {
-            List<Tag> tags = new ArrayList<>(cursor.getCount());
-            int i = 0;
-            if (cursor.moveToFirst()) {
-                do {
-                    tags.add(cursorToTag(cursor));
-                } while (cursor.moveToNext());
+            try (cursor) {
+                List<Tag> tags = new ArrayList<>(cursor.getCount());
+                int i = 0;
+                if (cursor.moveToFirst()) {
+                    do {
+                        tags.add(cursorToTag(cursor));
+                    } while (cursor.moveToNext());
+                }
+                return tags;
             }
-            cursor.close();
-            return tags;
         }
 
         /**
@@ -389,10 +398,9 @@ public class Queries {
          */
         public static boolean isBlackListed(Tag tag) {
             String query = "SELECT " + IDTAG + " FROM " + TABLE_NAME + " WHERE " + IDTAG + "=? AND " + ONLINE + "=1";
-            Cursor c = db.rawQuery(query, new String[]{"" + tag.getId()});
-            boolean x = c.moveToFirst();
-            c.close();
-            return x;
+            try (Cursor c = db.rawQuery(query, new String[]{"" + tag.getId()})) {
+                return c.moveToFirst();
+            }
         }
 
         /**
@@ -401,17 +409,17 @@ public class Queries {
         @Nullable
         public static Tag getTagById(int id) {
             String query = "SELECT * FROM " + TABLE_NAME + " WHERE " + IDTAG + " = ?";
-            Cursor c = db.rawQuery(query, new String[]{"" + id});
-            Tag t = null;
-            if (c.moveToFirst()) t = cursorToTag(c);
-            c.close();
-            return t;
+            try (Cursor c = db.rawQuery(query, new String[]{"" + id})) {
+                Tag t = null;
+                if (c.moveToFirst()) t = cursorToTag(c);
+                return t;
+            }
         }
 
-        public static int updateStatus(int id, TagStatus status) {
+        public static void updateStatus(int id, TagStatus status) {
             ContentValues values = new ContentValues(1);
             values.put(STATUS, status.ordinal());
-            return db.updateWithOnConflict(TABLE_NAME, values, IDTAG + "=?", new String[]{"" + id}, SQLiteDatabase.CONFLICT_IGNORE);
+            db.updateWithOnConflict(TABLE_NAME, values, IDTAG + "=?", new String[]{"" + id}, SQLiteDatabase.CONFLICT_IGNORE);
         }
 
         /**
@@ -426,6 +434,7 @@ public class Queries {
         }
 
         public static void insert(Tag tag, boolean replace) {
+
             ContentValues values = new ContentValues(5);
             values.put(IDTAG, tag.getId());
             values.put(NAME, tag.getName());
@@ -476,22 +485,22 @@ public class Queries {
         public static TagStatus getStatus(Tag tag) {
             String query = "SELECT " + STATUS + " FROM " + TABLE_NAME +
                 " WHERE " + IDTAG + " =?";
-            Cursor c = db.rawQuery(query, new String[]{"" + tag.getId()});
-            TagStatus status = null;
-            if (c.moveToFirst()) {
-                status = TagTable.cursorToTag(c).getStatus();
-                tag.setStatus(status);
+            try (Cursor c = db.rawQuery(query, new String[]{"" + tag.getId()})) {
+                TagStatus status = null;
+                if (c.moveToFirst()) {
+                    status = TagTable.cursorToTag(c).getStatus();
+                    tag.setStatus(status);
+                }
+                return status;
             }
-            c.close();
-            return status;
         }
 
         public static Tag getTagFromTagName(String name) {
             Tag tag = null;
-            Cursor cursor = db.query(TABLE_NAME, null, NAME + "=?", new String[]{name}, null, null, null);
-            if (cursor.moveToFirst()) tag = cursorToTag(cursor);
-            cursor.close();
-            return tag;
+            try (Cursor cursor = db.query(TABLE_NAME, null, NAME + "=?", new String[]{name}, null, null, null)) {
+                if (cursor.moveToFirst()) tag = cursorToTag(cursor);
+                return tag;
+            }
         }
 
         /**
@@ -501,11 +510,12 @@ public class Queries {
         public static TagList getTagsFromListOfInt(String tagString) {
             TagList tags = new TagList();
             String query = "SELECT * FROM " + TABLE_NAME + " WHERE " + IDTAG + " IN (" + tagString + ")";
-            Cursor cursor = db.rawQuery(query, null);
-            if (cursor.moveToFirst()) {
-                do {
-                    tags.addTag(cursorToTag(cursor));
-                } while (cursor.moveToNext());
+            try (Cursor cursor = db.rawQuery(query, null)) {
+                if (cursor.moveToFirst()) {
+                    do {
+                        tags.addTag(cursorToTag(cursor));
+                    } while (cursor.moveToNext());
+                }
             }
             return tags;
         }
@@ -529,10 +539,10 @@ public class Queries {
             Tag tag = null;
             String query = "SELECT * FROM " + TABLE_NAME + " WHERE " + NAME + " = ? AND " + TYPE + "=?";
             LogUtility.d(query);
-            Cursor c = db.rawQuery(query, new String[]{name, "" + type.getId()});
-            if (c.moveToFirst()) tag = cursorToTag(c);
-            c.close();
-            return tag;
+            try (Cursor c = db.rawQuery(query, new String[]{name, "" + type.getId()})) {
+                if (c.moveToFirst()) tag = cursorToTag(c);
+                return tag;
+            }
         }
 
         /**
@@ -553,8 +563,18 @@ public class Queries {
         }
 
         /*To avoid conflict between the import process and the ScrapeTags*/
-        public static void insertScrape(Tag tag, boolean b) {
-            if (db.isOpen()) insert(tag, b);
+        public static void insertScrape(List<Tag> tags, boolean b) {
+            if (db.isOpen()){
+                db.beginTransaction();
+                try {
+                    for (Tag tag : tags) {
+                        insert(tag, b);
+                    }
+                    db.setTransactionSuccessful();
+                } finally {
+                    db.endTransaction();
+                }
+            }
         }
     }
 
@@ -563,7 +583,9 @@ public class Queries {
         public static final String RANGE_START = "range_start";
         public static final String RANGE_END = "range_end";
         public static final String TABLE_NAME = "Downloads";
-        /** @noinspection unused*/
+        /**
+         * @noinspection unused
+         */
         public static final String DROP_TABLE = "DROP TABLE IF EXISTS " + TABLE_NAME;
         static final String CREATE_TABLE = "CREATE TABLE IF NOT EXISTS `Downloads` (" +
             "`id_gallery`  INT NOT NULL PRIMARY KEY , " +
@@ -591,20 +613,20 @@ public class Queries {
         public static List<GalleryDownloaderManager> getAllDownloads(Context context) throws IOException {
             String q = "SELECT * FROM %s INNER JOIN %s ON %s=%s";
             String query = String.format(Locale.US, q, GalleryTable.TABLE_NAME, DownloadTable.TABLE_NAME, GalleryTable.IDGALLERY, DownloadTable.ID_GALLERY);
-            Cursor c = db.rawQuery(query, null);
-            List<GalleryDownloaderManager> managers = new ArrayList<>();
+            try (Cursor c = db.rawQuery(query, null)) {
+                List<GalleryDownloaderManager> managers = new ArrayList<>();
 
-            Gallery x;
-            GalleryDownloaderManager m;
-            if (c.moveToFirst()) {
-                do {
-                    x = GalleryTable.cursorToGallery(c);
-                    m = new GalleryDownloaderManager(context, x, c.getInt(c.getColumnIndex(RANGE_START)), c.getInt(c.getColumnIndex(RANGE_END)));
-                    managers.add(m);
-                } while (c.moveToNext());
+                Gallery x;
+                GalleryDownloaderManager m;
+                if (c.moveToFirst()) {
+                    do {
+                        x = GalleryTable.cursorToGallery(context, c);
+                        m = new GalleryDownloaderManager(context, x, c.getInt(c.getColumnIndex(RANGE_START)), c.getInt(c.getColumnIndex(RANGE_END)));
+                        managers.add(m);
+                    } while (c.moveToNext());
+                }
+                return managers;
             }
-            c.close();
-            return managers;
         }
     }
 
@@ -615,7 +637,9 @@ public class Queries {
         public static final String THUMB = "thumbType";
         public static final String TIME = "time";
         public static final String TABLE_NAME = "History";
-        /** @noinspection unused*/
+        /**
+         * @noinspection unused
+         */
         public static final String DROP_TABLE = "DROP TABLE IF EXISTS " + TABLE_NAME;
         static final String CREATE_TABLE = "CREATE TABLE IF NOT EXISTS `History`(" +
             "`id` INT NOT NULL PRIMARY KEY," +
@@ -631,7 +655,7 @@ public class Queries {
             values.put(ID, gallery.getId());
             values.put(MEDIAID, gallery.getMediaId());
             values.put(TITLE, gallery.getTitle());
-            values.put(THUMB, gallery.getThumb().ordinal());
+            values.put(THUMB, gallery.getThumbnail().toString());
             values.put(TIME, new Date().getTime());
             db.insertWithOnConflict(TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_REPLACE);
             cleanHistory();
@@ -639,13 +663,14 @@ public class Queries {
 
         public static List<SimpleGallery> getHistory() {
             ArrayList<SimpleGallery> galleries = new ArrayList<>();
-            Cursor c = db.query(TABLE_NAME, null, null, null, null, null, TIME + " DESC", "" + Global.getMaxHistory());
-            if (c.moveToFirst()) {
-                do {
-                    galleries.add(new SimpleGallery(c));
-                } while (c.moveToNext());
+            try (Cursor c = db.query(TABLE_NAME, null, null, null, null, null, TIME + " DESC", "" + Global.getMaxHistory())) {
+                if (c.moveToFirst()) {
+                    do {
+                        galleries.add(new SimpleGallery(c));
+                    } while (c.moveToNext());
+                }
+                galleries.trimToSize();
             }
-            galleries.trimToSize();
             return galleries;
         }
 
@@ -662,7 +687,9 @@ public class Queries {
 
     public static class BookmarkTable {
         public static final String TABLE_NAME = "Bookmark";
-        /** @noinspection unused*/
+        /**
+         * @noinspection unused
+         */
         public static final String DROP_TABLE = "DROP TABLE IF EXISTS " + TABLE_NAME;
         static final String URL = "url";
         static final String PAGE = "page";
@@ -692,29 +719,31 @@ public class Queries {
 
         public static List<Bookmark> getBookmarks() {
             String query = "SELECT * FROM " + TABLE_NAME;
-            Cursor cursor = db.rawQuery(query, null);
-            List<Bookmark> bookmarks = new ArrayList<>(cursor.getCount());
-            Bookmark b;
-            LogUtility.d("This url has " + cursor.getCount());
-            if (cursor.moveToFirst()) {
-                do {
-                    b = new Bookmark(
-                        cursor.getString(cursor.getColumnIndex(URL)),
-                        cursor.getInt(cursor.getColumnIndex(PAGE)),
-                        ApiRequestType.values[cursor.getInt(cursor.getColumnIndex(TYPE))],
-                        cursor.getInt(cursor.getColumnIndex(TAG_ID))
-                    );
-                    bookmarks.add(b);
-                } while (cursor.moveToNext());
+            try (Cursor cursor = db.rawQuery(query, null)) {
+                List<Bookmark> bookmarks = new ArrayList<>(cursor.getCount());
+                Bookmark b;
+                LogUtility.d("This url has " + cursor.getCount());
+                if (cursor.moveToFirst()) {
+                    do {
+                        b = new Bookmark(
+                            cursor.getString(cursor.getColumnIndex(URL)),
+                            cursor.getInt(cursor.getColumnIndex(PAGE)),
+                            ApiRequestType.values[cursor.getInt(cursor.getColumnIndex(TYPE))],
+                            cursor.getInt(cursor.getColumnIndex(TAG_ID))
+                        );
+                        bookmarks.add(b);
+                    } while (cursor.moveToNext());
+                }
+                return bookmarks;
             }
-            cursor.close();
-            return bookmarks;
         }
     }
 
     public static class GalleryBridgeTable {
         public static final String TABLE_NAME = "GalleryTags";
-        /** @noinspection unused*/
+        /**
+         * @noinspection unused
+         */
         public static final String DROP_TABLE = "DROP TABLE IF EXISTS " + TABLE_NAME;
         static final String CREATE_TABLE = "CREATE TABLE IF NOT EXISTS `GalleryTags` (" +
             "`id_gallery` INT NOT NULL , " +
@@ -760,7 +789,9 @@ public class Queries {
 
     public static class FavoriteTable {
         public static final String TABLE_NAME = "Favorite";
-        /** @noinspection unused*/
+        /**
+         * @noinspection unused
+         */
         public static final String DROP_TABLE = "DROP TABLE IF EXISTS " + TABLE_NAME;
         static final String CREATE_TABLE = "CREATE TABLE IF NOT EXISTS `Favorite` (" +
             "`id_gallery` INT NOT NULL PRIMARY KEY , " +
@@ -832,11 +863,10 @@ public class Queries {
         /**
          * Retrieve all favorite galleries
          */
-        static List<Gallery> getAllFavoriteGalleries() throws IOException {
-            Cursor c = getAllFavoriteGalleriesCursor();
-            List<Gallery> galleries = GalleryTable.cursorToList(c);
-            c.close();
-            return galleries;
+        static List<Gallery> getAllFavoriteGalleries(Context context) throws IOException {
+            try (Cursor c = getAllFavoriteGalleriesCursor()) {
+                return GalleryTable.cursorToList(context, c);
+            }
         }
 
         static void insert(int galleryId) {
@@ -854,31 +884,30 @@ public class Queries {
             if (text == null || text.trim().isEmpty()) return countFavorite();
             int totalFavorite = 0;
             String param = "%" + text + "%";
-            Cursor c = db.query(FAVORITE_JOIN_GALLERY, new String[]{"COUNT(*)"}, TITLE_CLAUSE, new String[]{param, param, param}, null, null, null);
-            if (c.moveToFirst()) {
-                totalFavorite = c.getInt(0);
+            try (Cursor c = db.query(FAVORITE_JOIN_GALLERY, new String[]{"COUNT(*)"}, TITLE_CLAUSE, new String[]{param, param, param}, null, null, null)) {
+                if (c.moveToFirst()) {
+                    totalFavorite = c.getInt(0);
+                }
             }
-            c.close();
             return totalFavorite;
         }
 
         public static int countFavorite() {
             int totalFavorite = 0;
             String query = "SELECT COUNT(*) FROM " + TABLE_NAME;
-            Cursor c = db.rawQuery(query, null);
-            if (c.moveToFirst()) {
-                totalFavorite = c.getInt(0);
+            try (Cursor c = db.rawQuery(query, null)) {
+                if (c.moveToFirst()) {
+                    totalFavorite = c.getInt(0);
+                }
+                return totalFavorite;
             }
-            c.close();
-            return totalFavorite;
         }
 
         public static boolean isFavorite(int id) {
             String query = "SELECT * FROM " + TABLE_NAME + " WHERE " + ID_GALLERY + "=?";
-            Cursor c = db.rawQuery(query, new String[]{"" + id});
-            boolean b = c.moveToFirst();
-            c.close();
-            return b;
+            try (Cursor c = db.rawQuery(query, new String[]{"" + id})) {
+                return c.moveToFirst();
+            }
         }
 
         public static void removeAllFavorite() {
@@ -888,7 +917,9 @@ public class Queries {
 
     public static class ResumeTable {
         public static final String TABLE_NAME = "Resume";
-        /** @noinspection unused*/
+        /**
+         * @noinspection unused
+         */
         public static final String DROP_TABLE = "DROP TABLE IF EXISTS " + TABLE_NAME;
         static final String CREATE_TABLE = "CREATE TABLE IF NOT EXISTS `Resume` (" +
             "`id_gallery` INT NOT NULL PRIMARY KEY , " +
@@ -909,11 +940,11 @@ public class Queries {
         public static int pageFromId(int id) {
             if (id < 0) return -1;
             int val = -1;
-            Cursor c = db.query(TABLE_NAME, new String[]{PAGE}, ID_GALLERY + "= ?", new String[]{"" + id}, null, null, null);
-            if (c.moveToFirst())
-                val = c.getInt(c.getColumnIndex(PAGE));
-            c.close();
-            return val;
+            try (Cursor c = db.query(TABLE_NAME, new String[]{PAGE}, ID_GALLERY + "= ?", new String[]{"" + id}, null, null, null)) {
+                if (c.moveToFirst())
+                    val = c.getInt(c.getColumnIndex(PAGE));
+                return val;
+            }
         }
 
         public static void remove(int id) {
@@ -924,7 +955,9 @@ public class Queries {
 
     public static class StatusMangaTable {
         public static final String TABLE_NAME = "StatusManga";
-        /** @noinspection unused*/
+        /**
+         * @noinspection unused
+         */
         public static final String DROP_TABLE = "DROP TABLE IF EXISTS " + TABLE_NAME;
         static final String CREATE_TABLE = "CREATE TABLE IF NOT EXISTS `StatusManga` (" +
             "`gallery` INT NOT NULL PRIMARY KEY, " +
@@ -953,14 +986,14 @@ public class Queries {
 
         @NonNull
         public static Status getStatus(int id) {
-            Cursor cursor = db.query(TABLE_NAME, new String[]{NAME}, GALLERY + "=?", new String[]{"" + id}, null, null, null);
-            Status status;
-            if (cursor.moveToFirst())
-                status = StatusManager.getByName(cursor.getString(cursor.getColumnIndex(NAME)));
-            else
-                status = StatusManager.getByName(StatusManager.DEFAULT_STATUS);
-            cursor.close();
-            return status;
+            try (Cursor cursor = db.query(TABLE_NAME, new String[]{NAME}, GALLERY + "=?", new String[]{"" + id}, null, null, null)) {
+                Status status;
+                if (cursor.moveToFirst())
+                    status = StatusManager.getByName(cursor.getString(cursor.getColumnIndex(NAME)));
+                else
+                    status = StatusManager.getByName(StatusManager.DEFAULT_STATUS);
+                return status;
+            }
         }
 
         public static void insert(GenericGallery gallery, String s) {
@@ -993,12 +1026,12 @@ public class Queries {
                 StatusMangaTable.NAME);
             LogUtility.d(query);
             int value = -1;
-            Cursor cursor = db.rawQuery(query, new String[]{name});
-            if (cursor.moveToFirst()) {
-                value = cursor.getInt(0);
+            try (Cursor cursor = db.rawQuery(query, new String[]{name})) {
+                if (cursor.moveToFirst()) {
+                    value = cursor.getInt(0);
+                }
+                return value;
             }
-            cursor.close();
-            return value;
         }
 
         public static void removeStatus(String name) {
@@ -1008,7 +1041,9 @@ public class Queries {
 
     public static class StatusTable {
         public static final String TABLE_NAME = "Status";
-        /** @noinspection unused*/
+        /**
+         * @noinspection unused
+         */
         public static final String DROP_TABLE = "DROP TABLE IF EXISTS " + TABLE_NAME;
         static final String CREATE_TABLE = "CREATE TABLE IF NOT EXISTS `Status` (" +
             "`name` TINYTEXT NOT NULL PRIMARY KEY, " +
@@ -1030,16 +1065,16 @@ public class Queries {
         }
 
         public static void initStatuses() {
-            Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_NAME, null);
-            if (cursor.moveToFirst()) {
-                do {
-                    StatusManager.add(
-                        cursor.getString(cursor.getColumnIndex(NAME)),
-                        cursor.getInt(cursor.getColumnIndex(COLOR))
-                    );
-                } while (cursor.moveToNext());
+            try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_NAME, null)) {
+                if (cursor.moveToFirst()) {
+                    do {
+                        StatusManager.add(
+                            cursor.getString(cursor.getColumnIndex(NAME)),
+                            cursor.getInt(cursor.getColumnIndex(COLOR))
+                        );
+                    } while (cursor.moveToNext());
+                }
             }
-            cursor.close();
         }
 
         public static void update(Status oldStatus, Status newStatus) {

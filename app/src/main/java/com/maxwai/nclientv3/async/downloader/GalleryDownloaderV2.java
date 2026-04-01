@@ -262,22 +262,19 @@ public class GalleryDownloaderV2 {
         File filePath = new File(folder, page.getPageName());
         LogUtility.d("Saving into: " + filePath + "," + page.url);
         if (filePath.exists() && !isCorrupted(filePath)) return true;
-        try {
-            Response r = Global.getClient(context).newCall(new Request.Builder().url(page.url).build()).execute();
+        try (Response r = Global.getClient(context).newCall(new Request.Builder().url(page.url.toString()).build()).execute()) {
             if (r.code() != 200) {
-                r.close();
                 return false;
             }
-            assert r.body() != null;
+            //noinspection DataFlowIssue
             long expectedSize = Integer.parseInt(r.header("Content-Length", "-1"));
             long len = r.body().contentLength();
             if (len < 0 || expectedSize != len) {
-                r.close();
                 return false;
             }
             long written = Utility.writeStreamToFile(r.body().byteStream(), filePath);
-            r.close();
             if (written != len) {
+                //noinspection ResultOfMethodCallIgnored
                 filePath.delete();
                 return false;
             }
@@ -300,7 +297,7 @@ public class GalleryDownloaderV2 {
     private void checkPages() {
         File filePath;
         for (int i = 0; i < urls.size(); i++) {
-            if(urls.get(i)==null){
+            if (urls.get(i) == null) {
                 urls.remove(i--);
                 continue;
             }
@@ -312,31 +309,34 @@ public class GalleryDownloaderV2 {
 
     private void createPages() {
         for (int i = start; i <= end && i < gallery.getPageCount(); i++)
-            urls.add(new PageContainer(i + 1, gallery.getHighPage(i).toString(), gallery.getPageExtensionString(i)));
+            urls.add(new PageContainer(i + 1, gallery.getHighPage(i)));
     }
 
     private void createFolder() {
         folder = findFolder(Global.DOWNLOADFOLDER, title, id);
-        folder.mkdirs();
+        if (!folder.mkdirs()) {
+            return;
+        }
         try {
             writeNoMedia();
             createIdFile();
         } catch (IOException e) {
-            e.printStackTrace();
+            LogUtility.e("Error creating base files", e);
         }
     }
 
     private void createIdFile() throws IOException {
         File idFile = new File(folder, "." + id);
+        //noinspection ResultOfMethodCallIgnored
         idFile.createNewFile();
     }
 
     private void writeNoMedia() throws IOException {
         File nomedia = new File(folder, ".nomedia");
         LogUtility.d("NOMEDIA: " + nomedia + " for id " + id);
-        FileWriter writer = new FileWriter(nomedia);
-        gallery.jsonWrite(writer);
-        writer.close();
+        try (FileWriter writer = new FileWriter(nomedia)) {
+            gallery.jsonWrite(writer);
+        }
     }
 
     @Override
@@ -361,16 +361,16 @@ public class GalleryDownloaderV2 {
 
     public static class PageContainer {
         public final int page;
-        public final String url, ext;
+        public final Uri url;
 
-        public PageContainer(int page, String url, String ext) {
+        public PageContainer(int page, Uri url) {
             this.page = page;
             this.url = url;
-            this.ext = ext;
         }
 
         public String getPageName() {
-            return String.format(Locale.US, "%03d.%s", page, ext);
+            String fileName = Objects.requireNonNull(url.getLastPathSegment());
+            return String.format(Locale.US, "%03d.%s", page, fileName.substring(fileName.indexOf('.') + 1));
         }
     }
 }

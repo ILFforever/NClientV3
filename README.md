@@ -8,7 +8,7 @@ Credits to [@maxwai](https://github.com/maxwai/) for the fork and many thanks fo
 
 This app works for devices from API 26 (Android 8) and above.
 
-For Devices Running Android 8 (SDK 26 and 27) there is a separate SDK with `pre28` in the name. Support for this Version of the app will be reduced.
+For Devices Running Android 8 (SDK 26 and 27) there is a separate APK with `pre28` in the name. Support for this Version of the app will be reduced.
 
 Releases: <https://github.com/ILFforever/NClientV3/releases>
 
@@ -19,6 +19,10 @@ Releases: <https://github.com/ILFforever/NClientV3/releases>
 
 (I do not intent to update nor maintain this repo regularly but it does work as of 04/09/2025)
 (This is my first time actually working with Android Studio, so if any functionality breaks I'm super duper sorry)
+
+## Migrate from original NClientV2 to NClientV3
+
+Info can be found in the [wiki](https://github.com/maxwai/NClientV3/wiki/Migrate-from-NClientV2-to-NClientV3)
 
 ## Translate App
 
@@ -44,16 +48,23 @@ If your desired language is missing, write an issue, the language will be added.
 
 ## App Screen
 
-|                                                                Main page                                                                 |                                                                Lateral menu                                                                 |
-|:----------------------------------------------------------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------:|
-| ![Main page](https://raw.githubusercontent.com/maxwai/NClientV3/master/fastlane/metadata/android/en-US/images/phoneScreenshots/img1.jpg) | ![Lateral menu](https://raw.githubusercontent.com/maxwai/NClientV3/master/fastlane/metadata/android/en-US/images/phoneScreenshots/img2.jpg) |
-|                                                                  Search                                                                  |                                                                Random manga                                                                 |
-|  ![Search](https://raw.githubusercontent.com/maxwai/NClientV3/master/fastlane/metadata/android/en-US/images/phoneScreenshots/img3.jpg)   | ![Random manga](https://raw.githubusercontent.com/maxwai/NClientV3/master/fastlane/metadata/android/en-US/images/phoneScreenshots/img4.jpg) |
+|                                                                     Main page                                                                     |                                                                Lateral menu                                                                 |
+|:-------------------------------------------------------------------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------:|
+| ![Main page](https://raw.githubusercontent.com/maxwai/NClientV3/refs/heads/main/docs/images/phoneScreenshots/img1.png) | ![Lateral menu](https://raw.githubusercontent.com/maxwai/NClientV3/main/docs/images/phoneScreenshots/img2.png) |
+|                                                                      Search                                                                       |                                                                Random manga                                                                 |
+|        ![Search](https://raw.githubusercontent.com/maxwai/NClientV3/main/docs/images/phoneScreenshots/img3.png)        | ![Random manga](https://raw.githubusercontent.com/maxwai/NClientV3/main/docs/images/phoneScreenshots/img4.jpg) |
 
 ## Contributors
 
 - [shirokun20](https://github.com/shirokun20) for the initial Bug fixes
-- [w0x8m](https://github.com/w0x8m) for the new language picker
+- [w0x8m](https://github.com/w0x8m) for the new language picker & Chinese Simplified & Traditional translation
+- [ananas7](https://github.com/ananas7) for Arabic translation
+- [raymi7066](https://github.com/raymi7066) for Chinese Simplified translation
+- Худі Таджик (tadzikhudi) for Ukrainian translation
+- [PegadaDLancha](https://github.com/PegadaDLancha) for Brazilian Portuguese translation
+- Ivan Lost (dovakin1886) for Ukrainian translation
+- crorcetn for Japanese translation
+- [Inori333](https://github.com/inori-3333) for the initial implementation of the new api
 
 ## Contributors of original Project
 
@@ -71,30 +82,39 @@ If your desired language is missing, write an issue, the language will be added.
 - [chayleaf](https://github.com/chayleaf) for Cloudflare bypass
 - [Atmosphelen](https://github.com/Atmosphelen) for Ukrainian translation
 
+## Star History
+
+<a href="https://www.star-history.com/#maxwai/NClientV3&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=maxwai/NClientV3&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=maxwai/NClientV3&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=maxwai/NClientV3&type=date&legend=top-left" />
+ </picture>
+</a>
+
 ## Libraries
 
-- PersistentCookieJar ([License](https://github.com/franmontiel/PersistentCookieJar/blob/master/LICENSE.txt))
 - OKHttp ([License](https://github.com/square/okhttp/blob/master/LICENSE.txt))
-- multiline-collapsingtoolbar ([License](https://github.com/opacapp/multiline-collapsingtoolbar/blob/master/LICENSE))
-- PhotoView ([License](https://github.com/chrisbanes/PhotoView/blob/master/LICENSE))
+- PersistentCookieJar ([License](https://github.com/franmontiel/PersistentCookieJar/blob/master/LICENSE.txt))
 - JSoup ([License](https://github.com/jhy/jsoup/blob/master/LICENSE))
-- ACRA ([License](https://github.com/ACRA/acra/blob/master/LICENSE))
 - Glide ([License](https://github.com/bumptech/glide/blob/master/LICENSE))
+- AmbilWarna ([License](https://github.com/yukuku/ambilwarna/blob/master/LICENSE))
+- AndroidFastScroll ([License](https://github.com/zhanghai/AndroidFastScroll/blob/master/LICENSE))
 
 ## License
 
 ```text
-   Copyright 2024 maxwai
+Copyright 2024 maxwai
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 ```

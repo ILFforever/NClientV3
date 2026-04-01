@@ -1,5 +1,7 @@
 package com.maxwai.nclientv3.components.views;
 
+import static com.bumptech.glide.request.target.Target.SIZE_ORIGINAL;
+
 import android.graphics.drawable.Animatable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
@@ -45,7 +47,7 @@ public class ZoomFragment extends Fragment {
         void onZoomChange(View v, float zoomLevel);
     }
 
-    private static final float MAX_SCALE = 4f;
+    private static final float MAX_SCALE = 8f;
     private static final float CHANGE_PAGE_THRESHOLD = .2f;
     private PhotoView photoView = null;
     private ImageButton retryButton;
@@ -229,7 +231,7 @@ public class ZoomFragment extends Fragment {
                 request = glide.load(url);
             }
         }
-        return request;
+        return request.override(SIZE_ORIGINAL);
     }
 
     public Drawable getDrawable() {

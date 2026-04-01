@@ -16,15 +16,17 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.maxwai.nclientv3.GalleryActivity;
 import com.maxwai.nclientv3.LocalActivity;
 import com.maxwai.nclientv3.R;
+import com.maxwai.nclientv3.api.enums.TagType;
 import com.maxwai.nclientv3.api.local.LocalGallery;
 import com.maxwai.nclientv3.api.local.LocalSortType;
-import com.maxwai.nclientv3.async.converters.CreatePDF;
-import com.maxwai.nclientv3.async.converters.CreateZIP;
+import com.maxwai.nclientv3.async.converters.CreatePdfOrZip;
 import com.maxwai.nclientv3.async.database.Queries;
 import com.maxwai.nclientv3.async.downloader.DownloadGalleryV2;
 import com.maxwai.nclientv3.async.downloader.DownloadObserver;
@@ -35,7 +37,6 @@ import com.maxwai.nclientv3.settings.Global;
 import com.maxwai.nclientv3.utility.ImageDownloadUtility;
 import com.maxwai.nclientv3.utility.LogUtility;
 import com.maxwai.nclientv3.utility.Utility;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class LocalAdapter extends MultichoiceAdapter<Object, LocalAdapter.ViewHolder> implements Filterable {
@@ -80,6 +82,39 @@ public class LocalAdapter extends MultichoiceAdapter<Object, LocalAdapter.ViewHo
         long d2 = b2 ? ((LocalGallery) o2).getDirectory().lastModified() : Long.MAX_VALUE;
         if (d1 != d2) return Long.compare(d1, d2);
         return comparatorByName.compare(o1, o2);
+    };
+    private final Comparator<Object> comparatorByArtist = (o1, o2) -> {
+        if (o1 == o2) return 0;
+        boolean b1 = o1 instanceof LocalGallery;
+        boolean b2 = o2 instanceof LocalGallery;
+        String s1 = (b1 && ((LocalGallery) o1).getGalleryData().getTags().getCount(TagType.ARTIST) > 0)
+            ? ((LocalGallery) o1).getGalleryData().getTags().getTag(TagType.ARTIST, 0).getName()
+            : "";
+        String s2 = (b2 && ((LocalGallery) o2).getGalleryData().getTags().getCount(TagType.ARTIST) > 0)
+            ? ((LocalGallery) o2).getGalleryData().getTags().getTag(TagType.ARTIST, 0).getName()
+            : "";
+        if (s1.isEmpty() && !s2.isEmpty())
+            return 1;
+        if (!s1.isEmpty() && s2.isEmpty())
+            return -1;
+        return s1.compareTo(s2);
+    };
+
+    private final Comparator<Object> comparatorByGroup = (o1, o2) -> {
+        if (o1 == o2) return 0;
+        boolean b1 = o1 instanceof LocalGallery;
+        boolean b2 = o2 instanceof LocalGallery;
+        String s1 = (b1 && ((LocalGallery) o1).getGalleryData().getTags().getCount(TagType.GROUP) > 0)
+            ? ((LocalGallery) o1).getGalleryData().getTags().getTag(TagType.GROUP, 0).getName()
+            : "";
+        String s2 = (b2 && ((LocalGallery) o2).getGalleryData().getTags().getCount(TagType.GROUP) > 0)
+            ? ((LocalGallery) o2).getGalleryData().getTags().getTag(TagType.GROUP, 0).getName()
+            : "";
+        if (s1.isEmpty() && !s2.isEmpty())
+            return 1;
+        if (!s1.isEmpty() && s2.isEmpty())
+            return -1;
+        return s1.compareTo(s2);
     };
 
     private List<Object> filter;
@@ -151,6 +186,15 @@ public class LocalAdapter extends MultichoiceAdapter<Object, LocalAdapter.ViewHo
         }).start();
     }
 
+    public void addGalleries(@Nullable List<LocalGallery> gallery) {
+        if (gallery != null && !gallery.isEmpty()) {
+            dataset.removeAll(gallery);
+            dataset.addAll(gallery);
+            sortElements();
+            context.runOnUiThread(() -> notifyItemRangeChanged(0, getItemCount()));
+        }
+    }
+
     @Override
     protected ViewGroup getMaster(ViewHolder holder) {
         return holder.layout;
@@ -201,6 +245,10 @@ public class LocalAdapter extends MultichoiceAdapter<Object, LocalAdapter.ViewHo
                 return comparatorByName;
             case PAGE_COUNT:
                 return comparatorByPageCount;
+            case ARTIST:
+                return comparatorByArtist;
+            case GROUP:
+                return comparatorByGroup;
             //case SIZE:return comparatorBySize;
         }
         return comparatorByName;
@@ -313,8 +361,8 @@ public class LocalAdapter extends MultichoiceAdapter<Object, LocalAdapter.ViewHo
         holder.progress.setVisibility(downloader.getStatus() == GalleryDownloaderV2.Status.NOT_STARTED ? View.GONE : View.VISIBLE);
         holder.progressBar.setProgress(percentage);
         holder.progressBar.setIndeterminate(downloader.getStatus() == GalleryDownloaderV2.Status.NOT_STARTED);
-        Global.setTint(holder.playButton.getDrawable());
-        Global.setTint(holder.cancelButton.getDrawable());
+        Global.setTint(context, holder.playButton.getDrawable());
+        Global.setTint(context, holder.cancelButton.getDrawable());
     }
 
     private void removeDownloader(GalleryDownloaderV2 downloader) {
@@ -330,7 +378,7 @@ public class LocalAdapter extends MultichoiceAdapter<Object, LocalAdapter.ViewHo
     @Override
     public long getItemId(int position) {
         if (position == -1) return -1;
-        return filter.get(position).hashCode();
+        return Objects.hash(filter.get(position).hashCode(), position);
     }
 
     @Override
@@ -351,7 +399,7 @@ public class LocalAdapter extends MultichoiceAdapter<Object, LocalAdapter.ViewHo
                 if (o instanceof LocalGallery) {
                     dataset.remove(o);
                     Global.recursiveDelete(((LocalGallery) o).getDirectory());
-                } else if (o instanceof DownloadGalleryV2) {
+                } else if (o instanceof GalleryDownloaderV2) {
                     DownloadQueue.remove((GalleryDownloaderV2) o, true);
                 }
             }
@@ -376,7 +424,7 @@ public class LocalAdapter extends MultichoiceAdapter<Object, LocalAdapter.ViewHo
         builder.setPositiveButton(R.string.yes, (dialog, which) -> {
             for (Object o : getSelected()) {
                 if (!(o instanceof LocalGallery)) continue;
-                CreatePDF.startWork(context, (LocalGallery) o);
+                CreatePdfOrZip.startWork(context, (LocalGallery) o, true);
             }
         }).setNegativeButton(R.string.no, null).setCancelable(true);
         builder.show();
@@ -389,7 +437,7 @@ public class LocalAdapter extends MultichoiceAdapter<Object, LocalAdapter.ViewHo
         builder.setPositiveButton(R.string.yes, (dialog, which) -> {
             for (Object o : getSelected()) {
                 if (!(o instanceof LocalGallery)) continue;
-                CreateZIP.startWork(context, (LocalGallery) o);
+                CreatePdfOrZip.startWork(context, (LocalGallery) o, false);
             }
         }).setNegativeButton(R.string.no, null).setCancelable(true);
         builder.show();
@@ -420,9 +468,10 @@ public class LocalAdapter extends MultichoiceAdapter<Object, LocalAdapter.ViewHo
             }
 
             @SuppressLint("NotifyDataSetChanged")
+            @SuppressWarnings("unchecked")
             @Override
             protected void publishResults(CharSequence constraint, FilterResults results) {
-                if (results != null) {
+                if (results != null && results.values instanceof CopyOnWriteArrayList) {
                     filter = (CopyOnWriteArrayList<Object>) results.values;
                     context.runOnUiThread(() -> notifyDataSetChanged());
                 }
@@ -451,6 +500,7 @@ public class LocalAdapter extends MultichoiceAdapter<Object, LocalAdapter.ViewHo
             GalleryDownloaderV2 d = (GalleryDownloaderV2) o;
             if (d.getStatus() == GalleryDownloaderV2.Status.PAUSED)
                 d.setStatus(GalleryDownloaderV2.Status.NOT_STARTED);
+            DownloadGalleryV2.startWork(context);
         }
         context.runOnUiThread(this::notifyDataSetChanged);
     }

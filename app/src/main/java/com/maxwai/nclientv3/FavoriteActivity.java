@@ -8,6 +8,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
 
@@ -20,6 +21,8 @@ import com.maxwai.nclientv3.components.views.PageSwitcher;
 import com.maxwai.nclientv3.settings.Global;
 import com.maxwai.nclientv3.utility.Utility;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import java.util.Objects;
 
 
 public class FavoriteActivity extends BaseActivity {
@@ -41,9 +44,10 @@ public class FavoriteActivity extends BaseActivity {
         setContentView(R.layout.app_bar_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getSupportActionBar().setDisplayShowTitleEnabled(true);
-        getSupportActionBar().setTitle(R.string.favorite_manga);
+        ActionBar actionBar = Objects.requireNonNull(getSupportActionBar());
+        actionBar.setDisplayHomeAsUpEnabled(true);
+        actionBar.setDisplayShowTitleEnabled(true);
+        actionBar.setTitle(R.string.favorite_manga);
         pageSwitcher = findViewById(R.id.page_switcher);
         recycler = findViewById(R.id.recycler);
         refresher = findViewById(R.id.refresher);
@@ -68,7 +72,7 @@ public class FavoriteActivity extends BaseActivity {
         return pageSwitcher.getActualPage();
     }
 
-    @Override
+@Override
     protected int getLandscapeColumnCount() {
         return Global.getColLandFavorite();
     }
@@ -106,7 +110,7 @@ public class FavoriteActivity extends BaseActivity {
         menu.findItem(R.id.add_bookmark).setVisible(false);
 
         searchView = (androidx.appcompat.widget.SearchView) menu.findItem(R.id.search).getActionView();
-        searchView.setOnQueryTextListener(new androidx.appcompat.widget.SearchView.OnQueryTextListener() {
+        Objects.requireNonNull(searchView).setOnQueryTextListener(new androidx.appcompat.widget.SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
                 return true;
@@ -120,7 +124,7 @@ public class FavoriteActivity extends BaseActivity {
                 return true;
             }
         });
-        Utility.tintMenu(menu);
+        Utility.tintMenu(this, menu);
 
         return true;
     }
@@ -138,14 +142,7 @@ public class FavoriteActivity extends BaseActivity {
             adapter.setSortByTitle(sortByTitle);
             item.setTitle(sortByTitle ? R.string.sort_by_latest : R.string.sort_by_title);
         } else if (item.getItemId() == R.id.random_favorite) {
-            new MaterialAlertDialogBuilder(this)
-                .setTitle("Random from Favorites")
-                .setItems(new String[]{"From current page", "From all favorites"}, (dialog, which) -> {
-                    if (which == 0) adapter.randomGallery();
-                    else adapter.randomFromAllFavorites();
-                })
-                .setNegativeButton(R.string.cancel, null)
-                .show();
+            startActivity(new Intent(this, RandomFavoriteActivity.class));
         }
         return super.onOptionsItemSelected(item);
     }

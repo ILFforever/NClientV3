@@ -22,7 +22,6 @@ import com.maxwai.nclientv3.async.database.Queries;
 import com.maxwai.nclientv3.settings.Global;
 import com.maxwai.nclientv3.utility.ImageDownloadUtility;
 import com.maxwai.nclientv3.utility.LogUtility;
-import com.maxwai.nclientv3.utility.Utility;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -64,11 +63,14 @@ public class FavoriteAdapter extends RecyclerView.Adapter<GenericAdapter.ViewHol
         if (galleries[position] != null) return galleries[position];
         cursor.moveToPosition(position);
         try {
-            Gallery g = Queries.GalleryTable.cursorToGallery(cursor);
+            Gallery g = Queries.GalleryTable.cursorToGallery(activity, cursor);
             galleries[position] = g;
+            if (g.getGalleryData().hasUpdatedInfo()) { // TODO: to be removed in next major version
+                Queries.GalleryTable.insert(g);
+            }
             return g;
         } catch (IOException e) {
-            e.printStackTrace();
+            LogUtility.w("Couldn't get gallery From Position", e);
             return null;
         }
     }
@@ -140,7 +142,7 @@ public class FavoriteAdapter extends RecyclerView.Adapter<GenericAdapter.ViewHol
                 results.count = c.getCount();
                 results.values = c;
                 LogUtility.d("FILTERING3");
-                LogUtility.e(results.count + ";" + results.values);
+                LogUtility.d(results.count + ";" + results.values);
                 setRefresh(false);
                 return results;
             }
@@ -149,7 +151,6 @@ public class FavoriteAdapter extends RecyclerView.Adapter<GenericAdapter.ViewHol
             protected void publishResults(CharSequence constraint, FilterResults results) {
                 if (results == null) return;
                 setRefresh(true);
-                LogUtility.d("After called2");
                 final int oldSize = getItemCount(), newSize = results.count;
                 updateCursor((Cursor) results.values);
                 //not in runOnUIThread because is always executed on UI
@@ -189,49 +190,6 @@ public class FavoriteAdapter extends RecyclerView.Adapter<GenericAdapter.ViewHol
         ArrayList<Gallery> galleries = new ArrayList<>(count);
         for (int i = 0; i < count; i++) galleries.add(galleryFromPosition(i));
         return galleries;
-    }
-
-    public void randomGallery() {
-        if (cursor == null || cursor.getCount() == 0) {
-            LogUtility.e("randomGallery: cursor is null or empty");
-            return;
-        }
-
-        int randomIndex = Utility.RANDOM.nextInt(cursor.getCount());
-        Gallery g = galleryFromPosition(randomIndex);
-
-        if (g != null) {
-            activity.runOnUiThread(() -> startGallery(g));
-        } else {
-            LogUtility.e("randomGallery: gallery is null at index " + randomIndex);
-        }
-    }
-
-    public void randomFromAllFavorites() {
-        new Thread(() -> {
-            int totalFavorites = Queries.FavoriteTable.countFavorite(lastQuery.toString());
-            if (totalFavorites < 1) return;
-
-            int perPage = FavoriteActivity.getEntryPerPage();
-            int totalPages = (int) Math.ceil((double) totalFavorites / perPage);
-            int randomPage = Utility.RANDOM.nextInt(totalPages) + 1;
-
-            Cursor c = Queries.FavoriteTable.getAllFavoriteGalleriesCursor(
-                lastQuery.toString(), sortByTitle, perPage, (randomPage - 1) * perPage);
-
-            if (c != null && c.getCount() > 0) {
-                int randomIndex = Utility.RANDOM.nextInt(c.getCount());
-                c.moveToPosition(randomIndex);
-                try {
-                    Gallery g = Queries.GalleryTable.cursorToGallery(c);
-                    activity.runOnUiThread(() -> startGallery(g));
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    c.close();
-                }
-            }
-        }).start();
     }
 
 

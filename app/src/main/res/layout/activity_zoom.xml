@@ -4,7 +4,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -43,7 +42,6 @@
             android:alpha="0.75"
             android:background="?attr/colorPrimaryVariant"
             android:minHeight="?attr/actionBarSize"
-            android:paddingTop="@dimen/status_bar_height"
             android:theme="?attr/actionBarTheme"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
