@@ -6,6 +6,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
@@ -14,14 +15,18 @@ import androidx.appcompat.widget.Toolbar;
 
 import com.maxwai.nclientv3.adapters.FavoriteAdapter;
 import com.maxwai.nclientv3.api.components.Gallery;
+import com.maxwai.nclientv3.api.components.GalleryData;
 import com.maxwai.nclientv3.async.database.Queries;
 import com.maxwai.nclientv3.async.downloader.DownloadGalleryV2;
 import com.maxwai.nclientv3.components.activities.BaseActivity;
 import com.maxwai.nclientv3.components.views.PageSwitcher;
 import com.maxwai.nclientv3.settings.Global;
+import com.maxwai.nclientv3.utility.LogUtility;
 import com.maxwai.nclientv3.utility.Utility;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.net.HttpURLConnection;
+import java.util.ArrayList;
 import java.util.Objects;
 
 
@@ -31,6 +36,7 @@ public class FavoriteActivity extends BaseActivity {
     private boolean sortByTitle = false;
     private PageSwitcher pageSwitcher;
     private SearchView searchView;
+    private volatile boolean legacyQueueRunning = false;
 
     public static int getEntryPerPage() {
         return Global.isInfiniteScrollFavorite() ? Integer.MAX_VALUE : ENTRY_PER_PAGE;
@@ -56,13 +62,18 @@ public class FavoriteActivity extends BaseActivity {
 
 
         refresher.setOnRefreshListener(adapter::forceReload);
+        adapter.setOnCursorUpdated(this::startLegacyRefreshQueue);
         changeLayout(getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE);
         recycler.setAdapter(adapter);
         pageSwitcher.setPages(1, 1);
         pageSwitcher.setChanger(new PageSwitcher.DefaultPageChanger() {
             @Override
             public void pageChanged() {
-                if (adapter != null) adapter.changePage();
+                if (adapter != null) {
+                    legacyQueueRunning = false; // cancel current queue; new queue starts after cursor updates
+                    adapter.changePage();
+                    recycler.scrollToPosition(0);
+                }
             }
         });
 
@@ -98,6 +109,74 @@ public class FavoriteActivity extends BaseActivity {
         pageSwitcher.setTotalPage(calculatePages(query));
         adapter.forceReload();
         super.onResume();
+    }
+
+    private void startLegacyRefreshQueue() {
+        if (legacyQueueRunning || adapter == null) return;
+
+        ArrayList<Integer> ids = adapter.getCurrentPageOldFormatIds();
+        if (ids.isEmpty()) return;
+        legacyQueueRunning = true;
+        new Thread(() -> {
+            GalleryData.queuedForRefresh.addAll(ids);
+            LogUtility.i("Legacy refresh queue: " + ids.size() + " old-format favorites to refresh");
+            for (int j = 0; j < ids.size() && legacyQueueRunning; j++) {
+                int galleryId = ids.get(j);
+                boolean rateLimited = false;
+                try {
+                    String url = Utility.getBaseUrl() + "api/v2/galleries/" + galleryId;
+                    okhttp3.Request request = new okhttp3.Request.Builder().url(url).build();
+                    try (okhttp3.Response resp = Global.getClient(this).newCall(request).execute()) {
+                        okhttp3.ResponseBody respBody = resp.body();
+                        String body = respBody != null ? respBody.string() : "";
+                        int code = resp.code();
+                        if (code == HttpURLConnection.HTTP_OK) {
+                            Gallery gallery = new Gallery(this, body, null, false);
+                            Queries.GalleryTable.insert(gallery);
+                            LogUtility.d("Legacy queue: refreshed gallery " + galleryId);
+                            if (adapter != null) adapter.invalidateGallery(galleryId);
+                        } else if (code == HttpURLConnection.HTTP_NOT_FOUND || code == 410) {
+                            Queries.GalleryTable.delete(galleryId);
+                            LogUtility.w("Legacy queue: gallery " + galleryId + " deleted from server (HTTP " + code + ")");
+                            if (adapter != null) adapter.invalidateGallery(galleryId);
+                        } else if (code == 429 || body.contains("Rate limit exceeded")) {
+                            String retryAfter = resp.header("Retry-After");
+                            long waitMs = 20_000;
+                            if (retryAfter != null) {
+                                try { waitMs = Math.min(Long.parseLong(retryAfter.trim()) * 1000, 20_000); }
+                                catch (NumberFormatException ignored) {}
+                            }
+                            final long finalWaitMs = waitMs;
+                            LogUtility.w("Legacy queue: rate limited, pausing " + waitMs + "ms then retrying");
+                            runOnUiThread(() -> Toast.makeText(FavoriteActivity.this,
+                                getString(R.string.rate_limit_wait) + " (" + (finalWaitMs / 1000) + "s)", Toast.LENGTH_LONG).show());
+                            rateLimited = true;
+                            Thread.sleep(waitMs);
+                            j--; // retry same gallery
+                        } else {
+                            LogUtility.w("Legacy queue: gallery " + galleryId + " fetch failed with HTTP " + code + ", skipping");
+                        }
+                    }
+                } catch (InterruptedException e) {
+                    break;
+                } catch (Exception e) {
+                    LogUtility.e("Legacy queue: failed for gallery " + galleryId + ": " + e.getMessage(), e);
+                } finally {
+                    if (!rateLimited) GalleryData.queuedForRefresh.remove(galleryId);
+                }
+                if (!rateLimited) {
+                    try { Thread.sleep(200); } catch (InterruptedException e) { break; }
+                }
+            }
+            legacyQueueRunning = false;
+            LogUtility.i("Legacy refresh queue complete");
+        }).start();
+    }
+
+    @Override
+    protected void onDestroy() {
+        legacyQueueRunning = false;
+        super.onDestroy();
     }
 
     @Override

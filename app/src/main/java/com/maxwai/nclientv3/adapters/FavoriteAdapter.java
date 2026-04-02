@@ -38,6 +38,9 @@ public class FavoriteAdapter extends RecyclerView.Adapter<GenericAdapter.ViewHol
     private Cursor cursor;
     private boolean force = false;
     private boolean sortByTitle = false;
+    private Runnable onCursorUpdated = null;
+
+    public void setOnCursorUpdated(Runnable r) { onCursorUpdated = r; }
 
     public FavoriteAdapter(FavoriteActivity activity) {
         this.activity = activity;
@@ -71,6 +74,17 @@ public class FavoriteAdapter extends RecyclerView.Adapter<GenericAdapter.ViewHol
             } else {
                 Queries.GalleryTable.insert(g);
             }
+        } else {
+            // Old-format entry: background thread is fetching updated data.
+            // When it finishes, save to DB and rebind so the thumbnail/page count update.
+            g.getGalleryData().setOnRefreshed(() -> {
+                if (g.getGalleryData().isDeleted()) {
+                    Queries.GalleryTable.delete(g.getId());
+                } else {
+                    Queries.GalleryTable.insert(g);
+                }
+                activity.runOnUiThread(() -> notifyItemChanged(position));
+            });
         }
         return g;
     }
@@ -159,6 +173,7 @@ public class FavoriteAdapter extends RecyclerView.Adapter<GenericAdapter.ViewHol
                 notifyItemRangeChanged(0, Math.min(newSize, oldSize));
 
                 setRefresh(false);
+                if (onCursorUpdated != null) onCursorUpdated.run();
             }
         };
     }
@@ -182,6 +197,40 @@ public class FavoriteAdapter extends RecyclerView.Adapter<GenericAdapter.ViewHol
         galleries = new Gallery[c == null ? 0 : c.getCount()];
         cursor = c;
         statuses.clear();
+    }
+
+    /** Returns IDs of galleries on the current page whose pages are still in old format. */
+    public ArrayList<Integer> getCurrentPageOldFormatIds() {
+        ArrayList<Integer> ids = new ArrayList<>();
+        if (cursor == null || cursor.getCount() == 0) return ids;
+        int pagesCol = cursor.getColumnIndex(Queries.GalleryTable.PAGES);
+        int idCol = cursor.getColumnIndex(Queries.GalleryTable.IDGALLERY);
+        if (pagesCol < 0 || idCol < 0) return ids;
+        int saved = cursor.getPosition();
+        if (cursor.moveToFirst()) {
+            do {
+                String pages = cursor.getString(pagesCol);
+                if (pages != null && pages.contains(";") && !pages.contains("/")) {
+                    ids.add(cursor.getInt(idCol));
+                }
+            } while (cursor.moveToNext());
+        }
+        if (saved >= 0) cursor.moveToPosition(saved);
+        return ids;
+    }
+
+    /** Called by the background refresh queue when a gallery has been updated in the DB.
+     *  Clears the cached Gallery so the next bind re-reads fresh data from the cursor. */
+    public void invalidateGallery(int galleryId) {
+        if (galleries == null) return;
+        for (int i = 0; i < galleries.length; i++) {
+            if (galleries[i] != null && galleries[i].getId() == galleryId) {
+                galleries[i] = null;
+                final int pos = i;
+                activity.runOnUiThread(() -> notifyItemChanged(pos));
+                return;
+            }
+        }
     }
 
     public Collection<Gallery> getAllGalleries() {

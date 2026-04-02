@@ -62,8 +62,14 @@ public class GalleryData implements Parcelable {
     private boolean checkedExt = false;
     @Nullable
     private final Context context;
-    private boolean changedInfo = false;
+    private volatile boolean changedInfo = false;
     private boolean isDeleted = false;
+    private volatile Runnable onRefreshed = null;
+
+    /** Gallery IDs currently being refreshed by FavoriteActivity's background queue.
+     *  readPagePath skips spawning its own thread for these to avoid double API calls. */
+    public static final java.util.Set<Integer> queuedForRefresh =
+        java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
 
     private GalleryData(@Nullable Context context) {
         this.context = context;
@@ -125,6 +131,16 @@ public class GalleryData implements Parcelable {
 
     public boolean hasUpdatedInfo() {
         return changedInfo;
+    }
+
+    /** Registers a callback to be invoked when the background old-format refresh completes.
+     *  If the refresh already finished, the callback is invoked immediately. */
+    public void setOnRefreshed(Runnable r) {
+        if (changedInfo) {
+            r.run(); // thread already done, fire now
+        } else {
+            onRefreshed = r;
+        }
     }
 
 
@@ -369,8 +385,10 @@ public class GalleryData implements Parcelable {
             readPagePathNew(path);
             return;
         }
-        Thread updateThread = new Thread(() -> {
-            // Old entry, needs to be updated
+        // Old-format entry: refresh runs in background so the main thread is not blocked.
+        // Skip if the FavoriteActivity queue is already handling this gallery.
+        if (queuedForRefresh.contains(id)) return;
+        new Thread(() -> {
             String detailUrl = Utility.getBaseUrl() + "api/v2/galleries/" + id;
             try (Response resp = Global.getClient(Objects.requireNonNull(context)).newCall(new Request.Builder().url(detailUrl).build()).execute()) {
                 String body = resp.body().string();
@@ -388,14 +406,11 @@ public class GalleryData implements Parcelable {
             } catch (IOException | JSONException e) {
                 LogUtility.e(e);
             }
-        });
-        updateThread.start();
-        try {
+            pageCount = pages.size();
             changedInfo = true;
-            updateThread.join();
-        } catch (InterruptedException e) {
-            LogUtility.w(e);
-        }
+            Runnable cb = onRefreshed;
+            if (cb != null) cb.run();
+        }).start();
     }
 
     @NonNull

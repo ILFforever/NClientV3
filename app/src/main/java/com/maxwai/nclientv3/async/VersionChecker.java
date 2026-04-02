@@ -32,8 +32,8 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 public class VersionChecker {
-    private static final String RELEASE_API_URL = "https://api.github.com/repos/maxwai/NClientV3/releases";
-    private static final String LATEST_RELEASE_URL = "https://github.com/maxwai/NClientV3/releases/latest";
+    private static final String RELEASE_API_URL = "https://api.github.com/repos/ILFforever/NClientV3/releases";
+    private static final String LATEST_RELEASE_URL = "https://github.com/ILFforever/NClientV3/releases/latest";
     private static String latest = null;
     private final AppCompatActivity context;
     private String downloadUrl;

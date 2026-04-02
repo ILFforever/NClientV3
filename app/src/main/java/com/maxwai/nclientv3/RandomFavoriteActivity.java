@@ -12,15 +12,17 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.widget.Toolbar;
 
 import com.maxwai.nclientv3.api.components.Gallery;
+import com.maxwai.nclientv3.api.components.GalleryData;
 import com.maxwai.nclientv3.async.database.Queries;
 import com.maxwai.nclientv3.components.activities.GeneralActivity;
 import com.maxwai.nclientv3.settings.Favorites;
 import com.maxwai.nclientv3.settings.Global;
 import com.maxwai.nclientv3.utility.ImageDownloadUtility;
+import com.maxwai.nclientv3.utility.LogUtility;
 import com.maxwai.nclientv3.utility.Utility;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.util.Objects;
 
 public class RandomFavoriteActivity extends GeneralActivity {
@@ -105,10 +107,49 @@ public class RandomFavoriteActivity extends GeneralActivity {
             if (c != null && c.getCount() > 0) {
                 c.moveToFirst();
                 try {
+                    // Check for old-format pages before constructing Gallery to avoid readPagePath's implicit thread
+                    int pagesIndex = c.getColumnIndex(Queries.GalleryTable.PAGES);
+                    String pagesStr = pagesIndex >= 0 ? c.getString(pagesIndex) : null;
+                    boolean isOldFormat = pagesStr != null && pagesStr.contains(";") && !pagesStr.contains("/");
+                    int idIndex = c.getColumnIndex(Queries.GalleryTable.IDGALLERY);
+                    if (idIndex < 0) {
+                        LogUtility.w("Gallery ID column not found in cursor");
+                        c.close();
+                        return;
+                    }
+                    int galleryId = c.getInt(idIndex);
+
+                    if (isOldFormat) {
+                        GalleryData.queuedForRefresh.add(galleryId);
+                        try {
+                            String url = Utility.getBaseUrl() + "api/v2/galleries/" + galleryId;
+                            try (okhttp3.Response resp = Global.getClient(this).newCall(
+                                    new okhttp3.Request.Builder().url(url).build()).execute()) {
+                                okhttp3.ResponseBody respBody = resp.body();
+                                String body = respBody != null ? respBody.string() : "";
+                                if (resp.code() == HttpURLConnection.HTTP_OK) {
+                                    Gallery gallery = new Gallery(this, body, null, false);
+                                    Queries.GalleryTable.insert(gallery);
+                                    runOnUiThread(() -> loadGallery(gallery));
+                                    return;
+                                } else {
+                                    LogUtility.w("Random: old-format fetch failed for " + galleryId + " (HTTP " + resp.code() + "), using cached data");
+                                }
+                            }
+                        } catch (Exception e) {
+                            LogUtility.e("Random: old-format fetch failed for " + galleryId + ": " + e.getMessage(), e);
+                        } finally {
+                            GalleryData.queuedForRefresh.remove(galleryId);
+                        }
+                    }
+
                     Gallery g = Queries.GalleryTable.cursorToGallery(RandomFavoriteActivity.this, c);
                     runOnUiThread(() -> loadGallery(g));
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    // If readPagePath started a background thread (old-format fallback), reload UI when it finishes
+                    g.getGalleryData().setOnRefreshed(() -> {
+                        Queries.GalleryTable.insert(g);
+                        runOnUiThread(() -> loadGallery(g));
+                    });
                 } finally {
                     c.close();
                 }
@@ -119,7 +160,7 @@ public class RandomFavoriteActivity extends GeneralActivity {
     private void loadGallery(Gallery gallery) {
         loadedGallery = gallery;
         if (Global.isDestroyed(this)) return;
-        ImageDownloadUtility.loadImage(this, gallery.getCover(), thumbnail);
+        ImageDownloadUtility.loadImage(this, gallery.getThumbnail(), thumbnail);
         language.setText(Global.getLanguageFlag(gallery.getLanguage()));
         isFavorite = Favorites.isFavorite(loadedGallery);
         updateFavoriteButton();
