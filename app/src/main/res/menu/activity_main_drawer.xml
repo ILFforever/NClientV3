@@ -47,6 +47,11 @@
                     android:id="@+id/action_login"
                     android:icon="@drawable/ic_person"
                     android:title="@string/login" />
+                <item
+                    android:id="@+id/action_logout"
+                    android:icon="@drawable/ic_person"
+                    android:title="@string/logout"
+                    android:visible="false" />
             </group>
         </menu>
     </item>

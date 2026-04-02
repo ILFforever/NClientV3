@@ -26,7 +26,7 @@ android {
         create("release") {
             keyAlias = keystoreProperties["keyAlias"] as String
             keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = file(keystoreProperties["storeFile"] as String)
+            storeFile = File(keystoreProperties["storeFile"] as String)
             storePassword = keystoreProperties["storePassword"] as String
         }
     }
@@ -35,9 +35,9 @@ android {
         applicationId = "com.IlFforever.nclientv3"
         // Format: MmPPbb
         // M: Major, m: minor, P: Patch, b: build
-        versionCode = 420000
+        versionCode = 420100
         multiDexEnabled = true
-        versionName = "4.2.0"
+        versionName = "4.2.1"
         vectorDrawables.useSupportLibrary = true
         proguardFiles("proguard-rules.pro")
     }
@@ -101,11 +101,12 @@ android {
 
 androidComponents {
     onVariants() { variant ->
+        if (variant.buildType == "debug") return@onVariants
         var renameTask = tasks.register<CreateRenamedApk>("createRenamedApk${variant.flavorName?.capitalized()}${variant.buildType?.capitalized()}") {
             this.apkFolder.set(variant.artifacts.get(SingleArtifact.APK))
             this.builtArtifactsLoader.set(variant.artifacts.getBuiltArtifactsLoader())
             this.versionName.set(variant.outputs.single().versionName.get().substringBeforeLast("-"))
-            this.suffix.set((if (variant.flavorName == "pre28") "_pre28" else "") + (if (variant.buildType == "debug") "_debug" else ""))
+            this.suffix.set(if (variant.flavorName == "pre28") "_pre28" else "")
         }.get()
         tasks.whenTaskAdded {
             if (name == "assemble${variant.flavorName?.capitalized()}${variant.buildType?.capitalized()}") {

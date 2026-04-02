@@ -23,7 +23,7 @@ import okhttp3.Cookie;
 import okhttp3.HttpUrl;
 
 public class Login {
-    public static final String LOGIN_COOKIE = "sessionid";
+    public static final String LOGIN_COOKIE = "access_token";
     public static HttpUrl BASE_HTTP_URL;
     private static User user;
     private static boolean accountTag;
@@ -101,7 +101,7 @@ public class Login {
                 if (user != null) {
                     new LoadTags(context).start();
                     if (context instanceof MainActivity) {
-                        ((MainActivity) context).runOnUiThread(() -> ((MainActivity) context).loginItem.setTitle(context.getString(R.string.login_formatted, user.getUsername())));
+                        ((MainActivity) context).runOnUiThread(((MainActivity) context)::loadStringLogin);
                     }
                 }
             });

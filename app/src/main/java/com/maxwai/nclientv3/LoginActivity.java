@@ -16,8 +16,6 @@ import com.maxwai.nclientv3.settings.Login;
 import com.maxwai.nclientv3.utility.LogUtility;
 import com.maxwai.nclientv3.utility.Utility;
 
-import java.util.Collections;
-
 import okhttp3.Cookie;
 
 /**
@@ -62,29 +60,25 @@ public class LoginActivity extends GeneralActivity {
         public void run() {
             CookieManager manager = CookieManager.getInstance();
             String cookies = "";
-            while (cookies == null || !cookies.contains("sessionid")) {
+            while (cookies == null || !cookies.contains("access_token")) {
                 Utility.threadSleep(100);
                 if (isInterrupted()) return;
                 cookies = manager.getCookie(Utility.getBaseUrl());
             }
-            LogUtility.d("Cookie string: " + cookies);
-            String session = fetchCookie(cookies);
-            applyCookie(session);
+            applyAllCookies(cookies);
             runOnUiThread(LoginActivity.this::finish);
         }
 
-        private void applyCookie(String session) {
-            Cookie cookie = Cookie.parse(Login.BASE_HTTP_URL, "sessionid=" + session + "; HttpOnly; Max-Age=1209600; Path=/; SameSite=Lax");
-            Global.client.cookieJar().saveFromResponse(Login.BASE_HTTP_URL, Collections.singletonList(cookie));
+        private void applyAllCookies(String cookieString) {
+            java.util.List<Cookie> cookieList = new java.util.ArrayList<>();
+            for (String part : cookieString.split(";")) {
+                part = part.trim();
+                Cookie cookie = Cookie.parse(Login.BASE_HTTP_URL, part + "; Path=/");
+                if (cookie != null) cookieList.add(cookie);
+            }
+            Global.client.cookieJar().saveFromResponse(Login.BASE_HTTP_URL, cookieList);
             User.createUser(LoginActivity.this, null);
             finish();
-        }
-
-        String fetchCookie(String cookies) {
-            int start = cookies.indexOf("sessionid");
-            start = cookies.indexOf('=', start) + 1;
-            int end = cookies.indexOf(';', start);
-            return cookies.substring(start, end == -1 ? cookies.length() : end);
         }
     }
 }

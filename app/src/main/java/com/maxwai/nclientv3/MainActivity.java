@@ -97,7 +97,7 @@ public class MainActivity extends BaseActivity
         }
     };
     //views
-    public MenuItem loginItem, onlineFavoriteManager;
+    public MenuItem loginItem, logoutItem, onlineFavoriteManager;
     private InspectorV3 inspector = null;
     private NavigationView navigationView;
     private ModeType modeType = ModeType.UNKNOWN;
@@ -269,16 +269,29 @@ public class MainActivity extends BaseActivity
         pageSwitcher = findViewById(R.id.page_switcher);
         drawerLayout = findViewById(R.id.drawer_layout);
         loginItem = navigationView.getMenu().findItem(R.id.action_login);
+        logoutItem = navigationView.getMenu().findItem(R.id.action_logout);
         onlineFavoriteManager = navigationView.getMenu().findItem(R.id.online_favorite_manager);
     }
 
-    private void loadStringLogin() {
+    public void loadStringLogin() {
         if (loginItem == null) return;
-        if (com.maxwai.nclientv3.settings.Login.getUser() != null)
-            loginItem.setTitle(getString(R.string.login_formatted, com.maxwai.nclientv3.settings.Login.getUser().getUsername()));
-        else
-            loginItem.setTitle(com.maxwai.nclientv3.settings.Login.isLogged() ? R.string.logout : R.string.login);
-
+        com.maxwai.nclientv3.loginapi.User user = com.maxwai.nclientv3.settings.Login.getUser();
+        View headerView = navigationView.getHeaderView(0);
+        android.widget.ImageView navAvatar = headerView.findViewById(R.id.imageView);
+        android.widget.TextView navUsername = headerView.findViewById(R.id.textView3);
+        if (user != null) {
+            loginItem.setVisible(false);
+            logoutItem.setVisible(true);
+            navUsername.setText(user.getUsername());
+            if (user.getAvatarUrl() != null)
+                ImageDownloadUtility.loadImage(this, android.net.Uri.parse(user.getAvatarUrl()), navAvatar);
+        } else {
+            loginItem.setVisible(true);
+            loginItem.setTitle(R.string.login);
+            logoutItem.setVisible(false);
+            navUsername.setText(R.string.app_name);
+            navAvatar.setImageResource(R.drawable.ic_logo);
+        }
     }
 
     private void hideError() {
@@ -478,7 +491,7 @@ public class MainActivity extends BaseActivity
         builder.setPositiveButton(R.string.yes, (dialogInterface, i) -> {
             Login.logout();
             onlineFavoriteManager.setVisible(false);
-            loginItem.setTitle(R.string.login);
+            loadStringLogin();
         }).setNegativeButton(R.string.no, null).show();
     }
 
@@ -492,7 +505,7 @@ public class MainActivity extends BaseActivity
             idOpenedGallery = -1;
         }
         loadStringLogin();
-        onlineFavoriteManager.setVisible(com.maxwai.nclientv3.settings.Login.isLogged());
+        onlineFavoriteManager.setVisible(com.maxwai.nclientv3.settings.Login.isLogged(this));
         SharedPreferences settings = getSharedPreferences("Settings", 0);
         LocaleListCompat setLocaleList = AppCompatDelegate.getApplicationLocales();
         settings.edit().putString(getString(R.string.preference_key_language),
@@ -744,12 +757,10 @@ public class MainActivity extends BaseActivity
             intent.putExtra(getPackageName() + ".FAVORITE", true);
             startActivity(intent);
         } else if (item.getItemId() == R.id.action_login) {
-            if (Login.isLogged())
-                showLogoutForm();
-            else {
-                intent = new Intent(this, LoginActivity.class);
-                startActivity(intent);
-            }
+            intent = new Intent(this, LoginActivity.class);
+            startActivity(intent);
+        } else if (item.getItemId() == R.id.action_logout) {
+            showLogoutForm();
         } else if (item.getItemId() == R.id.random) {
             intent = new Intent(this, RandomActivity.class);
             startActivity(intent);
