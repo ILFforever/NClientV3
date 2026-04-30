@@ -23,6 +23,7 @@ public class Comment implements Parcelable {
         }
     };
     private int id;
+    private int galleryId;
     private User poster;
     private Date postDate;
     private String body;
@@ -33,6 +34,9 @@ public class Comment implements Parcelable {
             switch (reader.nextName()) {
                 case "id":
                     id = reader.nextInt();
+                    break;
+                case "gallery_id":
+                    galleryId = reader.nextInt();
                     break;
                 case "post_date":
                     postDate = new Date(reader.nextLong() * 1000);
@@ -53,6 +57,7 @@ public class Comment implements Parcelable {
 
     protected Comment(Parcel in) {
         id = in.readInt();
+        galleryId = in.readInt();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             poster = in.readParcelable(User.class.getClassLoader(), User.class);
         } else {
@@ -70,6 +75,7 @@ public class Comment implements Parcelable {
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeInt(id);
+        dest.writeInt(galleryId);
         dest.writeParcelable(poster, flags);
         dest.writeString(body);
         dest.writeLong(postDate.getTime());

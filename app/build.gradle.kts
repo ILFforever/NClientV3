@@ -35,9 +35,9 @@ android {
         applicationId = "com.IlFforever.nclientv3"
         // Format: MmPPbb
         // M: Major, m: minor, P: Patch, b: build
-        versionCode = 420400
+        versionCode = 420600
         multiDexEnabled = true
-        versionName = "4.2.4"
+        versionName = "4.2.6"
         vectorDrawables.useSupportLibrary = true
         proguardFiles("proguard-rules.pro")
     }

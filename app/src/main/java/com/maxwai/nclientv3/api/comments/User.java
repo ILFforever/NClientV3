@@ -24,7 +24,8 @@ public class User implements Parcelable {
         }
     };
     private int id;
-    private String username, avatarUrl;
+    private String username, slug, avatarUrl;
+    private boolean isSuperuser, isStaff;
 
     public User(JsonReader reader) throws IOException {
         reader.beginObject();
@@ -33,11 +34,20 @@ public class User implements Parcelable {
                 case "id":
                     id = reader.nextInt();
                     break;
-                case "post_date":
+                case "username":
                     username = reader.nextString();
+                    break;
+                case "slug":
+                    slug = reader.nextString();
                     break;
                 case "avatar_url":
                     avatarUrl = reader.nextString();
+                    break;
+                case "is_superuser":
+                    isSuperuser = reader.nextBoolean();
+                    break;
+                case "is_staff":
+                    isStaff = reader.nextBoolean();
                     break;
                 default:
                     reader.skipValue();
@@ -50,7 +60,10 @@ public class User implements Parcelable {
     protected User(Parcel in) {
         id = in.readInt();
         username = in.readString();
+        slug = in.readString();
         avatarUrl = in.readString();
+        isSuperuser = in.readByte() != 0;
+        isStaff = in.readByte() != 0;
     }
 
     @Override
@@ -62,7 +75,10 @@ public class User implements Parcelable {
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeInt(id);
         dest.writeString(username);
+        dest.writeString(slug);
         dest.writeString(avatarUrl);
+        dest.writeByte((byte) (isSuperuser ? 1 : 0));
+        dest.writeByte((byte) (isStaff ? 1 : 0));
     }
 
     public int getId() {

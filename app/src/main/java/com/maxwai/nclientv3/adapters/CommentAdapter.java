@@ -40,7 +40,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.ViewHold
         this.context = context;
         format = android.text.format.DateFormat.getDateFormat(context);
         this.galleryId = galleryId;
-        this.comments = comments == null ? new ArrayList<>() : comments;
+        this.comments = comments == null ? new ArrayList<>() : new ArrayList<>(comments);
         if (Login.isLogged() && Login.getUser() != null) {
             userId = Login.getUser().getId();
         } else userId = -1;
@@ -63,7 +63,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.ViewHold
         holder.date.setText(format.format(c.getPostDate()));
         holder.close.setOnClickListener(v -> {
             String refererUrl = String.format(Locale.US, Utility.getBaseUrl() + "g/%d/", galleryId);
-            String submitUrl = String.format(Locale.US, Utility.getBaseUrl() + "api/comments/%d/delete", c.getId());
+            String submitUrl = String.format(Locale.US, Utility.getBaseUrl() + "api/v2/comments/%d/delete", c.getId());
             new AuthRequest(refererUrl, submitUrl, new Callback() {
                 @Override
                 public void onFailure(@NonNull Call call, @NonNull IOException e) {
@@ -73,6 +73,9 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.ViewHold
                 @Override
                 public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                     if (response.body().string().contains("true")) {
+                        if (context instanceof com.maxwai.nclientv3.CommentActivity) {
+                            ((com.maxwai.nclientv3.CommentActivity) context).removeComment(c.getId());
+                        }
                         comments.remove(position);
                         context.runOnUiThread(() -> notifyItemRemoved(position));
                     }
