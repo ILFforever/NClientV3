@@ -296,6 +296,7 @@
     <string-array name="scroll_type">
         <item>水平</item>
         <item>垂直</item>
+        <item>Webtoon</item>
     </string-array>
     <string-array name="theme">
         <item>亮色</item>
