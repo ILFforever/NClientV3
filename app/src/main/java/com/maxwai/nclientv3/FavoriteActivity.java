@@ -164,9 +164,9 @@ public class FavoriteActivity extends BaseActivity {
 
     private void confirmFavoriteSync() {
         new MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.favorite_sync)
-            .setMessage(R.string.are_you_sure)
-            .setPositiveButton(R.string.favorite_sync,
+            .setTitle(R.string.favorite_sync_web)
+            .setMessage(R.string.favorite_sync_web_message)
+            .setPositiveButton(R.string.favorite_sync_confirm,
                 (dialog, which) -> syncFavorites())
             .setNegativeButton(R.string.cancel, null)
             .show();

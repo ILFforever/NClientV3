@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="favorites_title">お気に入り</string>
+    <string name="favorite_sync_web">Web とお気に入りを同期</string>
+    <string name="favorite_sync_web_message">この端末のお気に入りと Web アカウントのお気に入りを統合します。続行しますか？</string>
+    <string name="favorite_sync_confirm">同期</string>
+</resources>

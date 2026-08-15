@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="favorites_title">Favorites</string>
+    <string name="favorite_sync_web">Sync favorites with web</string>
+    <string name="favorite_sync_web_message">Favorites on this device and your web account will be merged. Continue?</string>
+    <string name="favorite_sync_confirm">Sync</string>
 </resources>

@@ -38,7 +38,7 @@
         android:id="@+id/sync_favorites"
         android:icon="@drawable/ic_sync"
         android:orderInCategory="11"
-        android:title="@string/favorite_sync"
+        android:title="@string/favorite_sync_web"
         android:visible="false"
         app:showAsAction="always" />
     <item

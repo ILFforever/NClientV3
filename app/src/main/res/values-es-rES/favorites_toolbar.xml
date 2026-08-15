@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="favorites_title">Favoritos</string>
+    <string name="favorite_sync_web">Sincronizar favoritos con la web</string>
+    <string name="favorite_sync_web_message">Los favoritos de este dispositivo se combinarán con los de tu cuenta web. ¿Continuar?</string>
+    <string name="favorite_sync_confirm">Sincronizar</string>
+</resources>

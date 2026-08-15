@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="favorites_title">المفضلة</string>
+    <string name="favorite_sync_web">مزامنة المفضلة مع الويب</string>
+    <string name="favorite_sync_web_message">سيتم دمج المفضلة على هذا الجهاز مع المفضلة في حسابك على الويب. هل تريد المتابعة؟</string>
+    <string name="favorite_sync_confirm">مزامنة</string>
+</resources>

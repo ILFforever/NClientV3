@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="favorites_title">收藏</string>
+    <string name="favorite_sync_web">与网页版同步收藏</string>
+    <string name="favorite_sync_web_message">此设备上的收藏将与网页版账户中的收藏合并。是否继续？</string>
+    <string name="favorite_sync_confirm">同步</string>
+</resources>

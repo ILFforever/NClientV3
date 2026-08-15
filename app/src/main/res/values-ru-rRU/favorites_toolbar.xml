@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="favorites_title">Избранное</string>
+    <string name="favorite_sync_web">Синхронизировать избранное с веб-версией</string>
+    <string name="favorite_sync_web_message">Избранное на этом устройстве будет объединено с избранным в вашем веб-аккаунте. Продолжить?</string>
+    <string name="favorite_sync_confirm">Синхронизировать</string>
+</resources>

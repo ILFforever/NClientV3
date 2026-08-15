@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="favorites_title">Favoriler</string>
+    <string name="favorite_sync_web">Favorileri web ile eşitle</string>
+    <string name="favorite_sync_web_message">Bu cihazdaki favoriler web hesabınızdaki favorilerle birleştirilecek. Devam edilsin mi?</string>
+    <string name="favorite_sync_confirm">Eşitle</string>
+</resources>
