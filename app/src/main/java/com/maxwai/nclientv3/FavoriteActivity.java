@@ -51,7 +51,7 @@ public class FavoriteActivity extends BaseActivity {
         ActionBar actionBar = Objects.requireNonNull(getSupportActionBar());
         actionBar.setDisplayHomeAsUpEnabled(true);
         actionBar.setDisplayShowTitleEnabled(true);
-        actionBar.setTitle(R.string.favorite_manga);
+        actionBar.setTitle(R.string.favorites_title);
         pageSwitcher = findViewById(R.id.page_switcher);
         recycler = findViewById(R.id.recycler);
         refresher = findViewById(R.id.refresher);
@@ -116,11 +116,17 @@ public class FavoriteActivity extends BaseActivity {
         menu.findItem(R.id.only_language).setVisible(false);
         menu.findItem(R.id.add_bookmark).setVisible(false);
         menu.findItem(R.id.open_browser).setVisible(false);
+        MenuItem searchItem = menu.findItem(R.id.search);
+        searchItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS
+            | MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW);
         syncItem = menu.findItem(R.id.sync_favorites);
         syncItem.setVisible(true);
         syncItem.setEnabled(!syncRunning);
+        MenuItem randomItem = menu.findItem(R.id.random_favorite);
+        randomItem.setVisible(true);
+        randomItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
-        searchView = (androidx.appcompat.widget.SearchView) menu.findItem(R.id.search).getActionView();
+        searchView = (androidx.appcompat.widget.SearchView) searchItem.getActionView();
         Objects.requireNonNull(searchView).setOnQueryTextListener(new androidx.appcompat.widget.SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
