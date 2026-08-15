@@ -33,6 +33,12 @@
         android:title="@string/open_in_browser"
         app:showAsAction="ifRoom|collapseActionView" />
     <item
+        android:id="@+id/sync_favorites"
+        android:icon="@drawable/ic_refresh"
+        android:title="@string/favorite_sync"
+        android:visible="false"
+        app:showAsAction="ifRoom|collapseActionView" />
+    <item
         android:id="@+id/add_bookmark"
         android:icon="@drawable/ic_bookmark_border"
         android:title="@string/add_bookmark"

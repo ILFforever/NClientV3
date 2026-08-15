@@ -31,6 +31,7 @@ import com.maxwai.nclientv3.settings.TagV2;
 import com.maxwai.nclientv3.utility.LogUtility;
 
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -38,6 +39,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.HashSet;
+import java.util.Set;
 
 @SuppressLint("Range")
 public class Queries {
@@ -203,6 +206,27 @@ public class Queries {
             //Insert gallery
             db.insertWithOnConflict(TABLE_NAME, null, values, gallery instanceof Gallery ? SQLiteDatabase.CONFLICT_REPLACE : SQLiteDatabase.CONFLICT_IGNORE);
             TagTable.insertTagsForGallery(data);
+        }
+
+        private static void insertFavoriteListItem(JSONObject item) throws JSONException {
+            ContentValues values = new ContentValues(12);
+            int pageCount = item.optInt("num_pages", 0);
+            String englishTitle = item.optString("english_title", "");
+            String japaneseTitle = item.optString("japanese_title", "");
+            values.put(IDGALLERY, item.getInt("id"));
+            values.put(TITLE_ENG, englishTitle);
+            values.put(TITLE_JP, japaneseTitle);
+            values.put(TITLE_PRETTY, englishTitle.isEmpty() ? japaneseTitle : englishTitle);
+            values.put(FAVORITE_COUNT, item.optInt("num_favorites", 0));
+            values.put(MEDIAID, item.optInt("media_id", 0));
+            // Old-format marker: the visible-page refresh queue replaces this with full v2 detail.
+            values.put(PAGES, pageCount + ";webp;webp;" + pageCount + ";webp;");
+            values.put(UPLOAD, 0);
+            values.put(MAX_WIDTH, item.optInt("thumbnail_width", 0));
+            values.put(MAX_HEIGHT, item.optInt("thumbnail_height", 0));
+            values.put(MIN_WIDTH, item.optInt("thumbnail_width", 0));
+            values.put(MIN_HEIGHT, item.optInt("thumbnail_height", 0));
+            db.insertWithOnConflict(TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_IGNORE);
         }
 
         /**
@@ -819,6 +843,11 @@ public class Queries {
             FavoriteTable.insert(gallery.getId());
         }
 
+        public static void addFavoriteListItem(JSONObject item) throws JSONException {
+            GalleryTable.insertFavoriteListItem(item);
+            FavoriteTable.insert(item.getInt("id"));
+        }
+
 
         static String titleTypeToColumn(TitleType type) {
             switch (type) {
@@ -901,6 +930,15 @@ public class Queries {
                 }
                 return totalFavorite;
             }
+        }
+
+        public static Set<Integer> getAllFavoriteIds() {
+            Set<Integer> ids = new HashSet<>();
+            try (Cursor c = db.query(TABLE_NAME, new String[]{ID_GALLERY},
+                null, null, null, null, null)) {
+                while (c.moveToNext()) ids.add(c.getInt(0));
+            }
+            return ids;
         }
 
         public static boolean isFavorite(int id) {

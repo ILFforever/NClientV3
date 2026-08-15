@@ -2,7 +2,6 @@ package com.maxwai.nclientv3;
 
 import android.content.Intent;
 import android.content.res.Configuration;
-import android.net.Uri;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -21,6 +20,8 @@ import com.maxwai.nclientv3.async.downloader.DownloadGalleryV2;
 import com.maxwai.nclientv3.components.activities.BaseActivity;
 import com.maxwai.nclientv3.components.views.PageSwitcher;
 import com.maxwai.nclientv3.settings.Global;
+import com.maxwai.nclientv3.settings.Login;
+import com.maxwai.nclientv3.settings.FavoriteSyncManager;
 import com.maxwai.nclientv3.utility.LogUtility;
 import com.maxwai.nclientv3.utility.Utility;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -36,6 +37,8 @@ public class FavoriteActivity extends BaseActivity {
     private boolean sortByTitle = false;
     private PageSwitcher pageSwitcher;
     private SearchView searchView;
+    private MenuItem syncItem;
+    private boolean syncRunning = false;
     private volatile boolean legacyQueueRunning = false;
 
     public static int getEntryPerPage() {
@@ -187,6 +190,10 @@ public class FavoriteActivity extends BaseActivity {
         menu.findItem(R.id.by_popular).setVisible(false);
         menu.findItem(R.id.only_language).setVisible(false);
         menu.findItem(R.id.add_bookmark).setVisible(false);
+        menu.findItem(R.id.open_browser).setVisible(false);
+        syncItem = menu.findItem(R.id.sync_favorites);
+        syncItem.setVisible(true);
+        syncItem.setEnabled(!syncRunning);
 
         searchView = (androidx.appcompat.widget.SearchView) menu.findItem(R.id.search).getActionView();
         Objects.requireNonNull(searchView).setOnQueryTextListener(new androidx.appcompat.widget.SearchView.OnQueryTextListener() {
@@ -210,10 +217,8 @@ public class FavoriteActivity extends BaseActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        Intent i;
-        if (item.getItemId() == R.id.open_browser) {
-            i = new Intent(Intent.ACTION_VIEW, Uri.parse(Utility.getBaseUrl() + "favorites/"));
-            startActivity(i);
+        if (item.getItemId() == R.id.sync_favorites) {
+            syncFavorites();
         } else if (item.getItemId() == R.id.download_page) {
             if (adapter != null) showDialogDownloadAll();
         } else if (item.getItemId() == R.id.sort_by_name) {
@@ -224,6 +229,66 @@ public class FavoriteActivity extends BaseActivity {
             startActivity(new Intent(this, RandomFavoriteActivity.class));
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void syncFavorites() {
+        if (syncRunning) return;
+        if (!Login.canAccessAuthenticatedApi(this)) {
+            Toast.makeText(this, R.string.favorite_sync_login_required, Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        syncRunning = true;
+        if (syncItem != null) syncItem.setEnabled(false);
+        refresher.setRefreshing(true);
+        FavoriteSyncManager.sync(this, new FavoriteSyncManager.Listener() {
+            @Override
+            public void onProgress(boolean uploading, int completed, int total) {
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    ActionBar actionBar = getSupportActionBar();
+                    if (actionBar != null) actionBar.setSubtitle(getString(uploading
+                        ? R.string.favorite_sync_upload_progress
+                        : R.string.favorite_sync_download_progress, completed, total));
+                });
+            }
+
+            @Override
+            public void onComplete(FavoriteSyncManager.Result result) {
+                runOnUiThread(() -> {
+                    if (!isFinishing() && !isDestroyed()) finishSync(result);
+                });
+            }
+
+            @Override
+            public void onFailure() {
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    resetSyncUi();
+                    Toast.makeText(FavoriteActivity.this,
+                        R.string.favorite_sync_failed, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    private void finishSync(FavoriteSyncManager.Result result) {
+        resetSyncUi();
+        String query = searchView == null ? null : searchView.getQuery().toString();
+        pageSwitcher.setTotalPage(calculatePages(query));
+        if (adapter != null) adapter.forceReload();
+        int message = result.failed == 0
+            ? R.string.favorite_sync_complete : R.string.favorite_sync_partial;
+        Toast.makeText(this, getString(message,
+            result.downloaded, result.uploaded, result.failed), Toast.LENGTH_LONG).show();
+    }
+
+    private void resetSyncUi() {
+        syncRunning = false;
+        if (syncItem != null) syncItem.setEnabled(true);
+        refresher.setRefreshing(false);
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) actionBar.setSubtitle(null);
     }
 
     private void showDialogDownloadAll() {

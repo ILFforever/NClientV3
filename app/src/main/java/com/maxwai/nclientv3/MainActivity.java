@@ -96,7 +96,7 @@ public class MainActivity extends BaseActivity
         }
     };
     //views
-    public MenuItem loginItem, logoutItem, onlineFavoriteManager;
+    public MenuItem loginItem, logoutItem;
     private InspectorV3 inspector = null;
     private NavigationView navigationView;
     private ModeType modeType = ModeType.UNKNOWN;
@@ -126,6 +126,11 @@ public class MainActivity extends BaseActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (opensUnifiedFavorites(getIntent())) {
+            startActivity(new Intent(this, FavoriteActivity.class));
+            finish();
+            return;
+        }
         setContentView(R.layout.activity_main);
         //load inspector
         selectStartMode(getIntent(), getPackageName());
@@ -251,7 +256,6 @@ public class MainActivity extends BaseActivity
         toolbar.setNavigationIcon(R.drawable.ic_arrow_back);
         toolbar.setNavigationOnClickListener(v -> finish());
         navigationView.setNavigationItemSelectedListener(this);
-        onlineFavoriteManager.setVisible(Login.canAccessAuthenticatedApi(this));
     }
 
     public void setIdOpenedGallery(int idOpenedGallery) {
@@ -268,7 +272,6 @@ public class MainActivity extends BaseActivity
         drawerLayout = findViewById(R.id.drawer_layout);
         loginItem = navigationView.getMenu().findItem(R.id.action_login);
         logoutItem = navigationView.getMenu().findItem(R.id.action_logout);
-        onlineFavoriteManager = navigationView.getMenu().findItem(R.id.online_favorite_manager);
     }
 
     public void loadStringLogin() {
@@ -333,7 +336,6 @@ public class MainActivity extends BaseActivity
             useTagMode(intent, packageName);
         else if (intent.getBooleanExtra(packageName + ".SEARCHMODE", false))
             useSearchMode(intent, packageName);
-        else if (intent.getBooleanExtra(packageName + ".FAVORITE", false)) useFavoriteMode(1);
         else if (intent.getBooleanExtra(packageName + ".BYBOOKMARK", false))
             useBookmarkMode(intent, packageName);
         else if (data != null) manageDataStart(data);
@@ -343,6 +345,23 @@ public class MainActivity extends BaseActivity
     private void useNormalMode() {
         inspector = InspectorV3.basicInspector(this, 1, resetDataset);
         modeType = ModeType.NORMAL;
+    }
+
+    private boolean opensUnifiedFavorites(Intent intent) {
+        if (intent.getBooleanExtra(getPackageName() + ".FAVORITE", false)) return true;
+        Uri data = intent.getData();
+        if (data != null && !data.getPathSegments().isEmpty()
+            && "favorites".equals(data.getPathSegments().get(0))) return true;
+        if (!intent.getBooleanExtra(getPackageName() + ".BYBOOKMARK", false)) return false;
+        InspectorV3 bookmarkInspector;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            bookmarkInspector = intent.getParcelableExtra(
+                getPackageName() + ".INSPECTOR", InspectorV3.class);
+        } else {
+            bookmarkInspector = intent.getParcelableExtra(getPackageName() + ".INSPECTOR");
+        }
+        return bookmarkInspector != null
+            && bookmarkInspector.getRequestType() == ApiRequestType.FAVORITE;
     }
 
     private void useBookmarkMode(Intent intent, String packageName) {
@@ -358,14 +377,6 @@ public class MainActivity extends BaseActivity
         if (type == ApiRequestType.BYTAG) modeType = ModeType.TAG;
         else if (type == ApiRequestType.BYALL) modeType = ModeType.NORMAL;
         else if (type == ApiRequestType.BYSEARCH) modeType = ModeType.SEARCH;
-        else if (type == ApiRequestType.FAVORITE) modeType = ModeType.FAVORITE;
-
-    }
-
-    private void useFavoriteMode(int page) {
-        //instantiateWebView();
-        inspector = InspectorV3.favoriteInspector(this, null, page, resetDataset);
-        modeType = ModeType.FAVORITE;
     }
 
     private void useSearchMode(Intent intent, String packageName) {
@@ -441,15 +452,7 @@ public class MainActivity extends BaseActivity
 
         if (pageParam != null) page = Integer.parseInt(pageParam);
 
-        if (favorite) {
-            if (Login.canAccessAuthenticatedApi(this)) useFavoriteMode(page);
-            else {
-                Intent intent = new Intent(this, FavoriteActivity.class);
-                startActivity(intent);
-                finish();
-            }
-            return;
-        }
+        if (favorite) return;
 
         inspector = InspectorV3.searchInspector(this, query, null, page, type, null, resetDataset);
         modeType = ModeType.SEARCH;
@@ -486,7 +489,6 @@ public class MainActivity extends BaseActivity
         builder.setIcon(R.drawable.ic_exit_to_app).setTitle(R.string.logout).setMessage(R.string.are_you_sure);
         builder.setPositiveButton(R.string.yes, (dialogInterface, i) -> {
             Login.logout();
-            onlineFavoriteManager.setVisible(Login.canAccessAuthenticatedApi(this));
             loadStringLogin();
         }).setNegativeButton(R.string.no, null).show();
     }
@@ -501,7 +503,6 @@ public class MainActivity extends BaseActivity
             idOpenedGallery = -1;
         }
         loadStringLogin();
-        onlineFavoriteManager.setVisible(Login.canAccessAuthenticatedApi(this));
         SharedPreferences settings = getSharedPreferences("Settings", 0);
         LocaleListCompat setLocaleList = AppCompatDelegate.getApplicationLocales();
         settings.edit().putString(getString(R.string.preference_key_language),
@@ -747,10 +748,6 @@ public class MainActivity extends BaseActivity
         } else if (item.getItemId() == R.id.action_settings) {
             setting = true;
             intent = new Intent(this, SettingsActivity.class);
-            startActivity(intent);
-        } else if (item.getItemId() == R.id.online_favorite_manager) {
-            intent = new Intent(this, MainActivity.class);
-            intent.putExtra(getPackageName() + ".FAVORITE", true);
             startActivity(intent);
         } else if (item.getItemId() == R.id.action_login) {
             intent = new Intent(this, LoginActivity.class);

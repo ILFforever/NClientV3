@@ -7,6 +7,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.ActionBar;
@@ -79,15 +80,17 @@ public class RandomActivity extends GeneralActivity {
 
         favorite.setOnClickListener(v -> {
             if (loadedGallery != null) {
-                if (isFavorite) {
-                    Favorites.removeFavorite(loadedGallery);
-                    isFavorite = false;
-                } else {
-                    Favorites.addFavorite(loadedGallery);
-                    isFavorite = true;
-                }
+                favorite.setEnabled(false);
+                Favorites.setFavorite(this, loadedGallery, !isFavorite, (success, favoriteState) -> {
+                    favorite.setEnabled(true);
+                    if (!success) {
+                        Toast.makeText(this, R.string.favorite_update_failed, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    isFavorite = favoriteState;
+                    favoriteUpdateButton();
+                });
             }
-            favoriteUpdateButton();
         });
 
         ColorStateList colorStateList = ColorStateList.valueOf(getColor(R.color.tint_light));

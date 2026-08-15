@@ -34,12 +34,6 @@
         app:showAsAction="ifRoom|collapseActionView" />
 
     <item
-        android:id="@+id/add_online_gallery"
-        android:icon="@drawable/ic_star"
-        android:orderInCategory="500"
-        android:title="@string/remove_from_online_favorites"
-        app:showAsAction="ifRoom|collapseActionView" />
-    <item
         android:id="@+id/manage_status"
         android:orderInCategory="550"
         android:title="@string/change_status"
