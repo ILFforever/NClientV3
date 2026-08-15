@@ -6,6 +6,7 @@ import android.webkit.CookieManager;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.maxwai.nclientv3.BuildConfig;
 import com.maxwai.nclientv3.components.CookieInterceptor;
 import com.maxwai.nclientv3.utility.LogUtility;
 import com.maxwai.nclientv3.utility.Utility;
@@ -41,7 +42,6 @@ public class CustomInterceptor implements Interceptor {
 
         @Override
         public void onFinish() {
-
         }
     };
     @Nullable
@@ -57,19 +57,15 @@ public class CustomInterceptor implements Interceptor {
     public Response intercept(Chain chain) throws IOException {
         Request request = chain.request();
         boolean rec = request.header("rec") != null;
-        if (logRequests)
-            LogUtility.d("Requested url: " + request.url());
+        if (logRequests) LogUtility.d("Requested url: " + request.url());
         Request.Builder r = request.newBuilder();
         r.removeHeader("rec");
-        r.addHeader("User-Agent", Global.getUserAgent());
+        r.addHeader("User-Agent", "NClient/" + BuildConfig.VERSION_NAME + " (https://github.com/ILFforever/NClientV3)");
         Response response = chain.proceed(r.build());
-        if (
-            (response.code() == HttpURLConnection.HTTP_UNAVAILABLE ||
-                response.code() == HttpURLConnection.HTTP_FORBIDDEN)
-                && (!rec || !MANAGER.endInterceptor())) {
-
+        if ((response.code() == HttpURLConnection.HTTP_UNAVAILABLE ||
+            response.code() == HttpURLConnection.HTTP_FORBIDDEN) &&
+            (!rec || !MANAGER.endInterceptor())) {
             CookieManager.getInstance().removeAllCookies(null);
-
             CookieInterceptor interceptor = new CookieInterceptor(MANAGER);
             interceptor.intercept();
             if (context != null) Global.reloadHttpClient(context);
@@ -77,5 +73,4 @@ public class CustomInterceptor implements Interceptor {
         }
         return response;
     }
-
 }

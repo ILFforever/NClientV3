@@ -1,16 +1,8 @@
 import com.android.build.api.artifact.SingleArtifact
+import com.android.build.api.variant.BuiltArtifactsLoader
+import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.FileInputStream
 import java.util.Properties
-import com.android.build.api.variant.BuiltArtifactsLoader
-import java.io.File
-import org.gradle.api.DefaultTask
-import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.TaskAction
-import org.gradle.internal.extensions.stdlib.capitalized
 
 plugins {
     id("com.android.application")
@@ -20,6 +12,12 @@ val keystorePropertiesFile: File = rootProject.file("keystore.properties")
 val keystoreProperties = Properties().apply {
     load(FileInputStream(keystorePropertiesFile))
 }
+
+val majorVersion = 4
+val minorVersion = 2
+val patchVersion = 7
+val buildVersion = 0
+val version = "${majorVersion}.${minorVersion}.${patchVersion}"
 
 android {
     signingConfigs {
@@ -35,9 +33,10 @@ android {
         applicationId = "com.IlFforever.nclientv3"
         // Format: MmPPbb
         // M: Major, m: minor, P: Patch, b: build
-        versionCode = 420700
+        versionCode =
+            "%d%d%02d%02d".format(majorVersion, minorVersion, patchVersion, buildVersion).toInt()
         multiDexEnabled = true
-        versionName = "4.2.7"
+        versionName = version
         vectorDrawables.useSupportLibrary = true
         proguardFiles("proguard-rules.pro")
     }
@@ -68,6 +67,11 @@ android {
             versionNameSuffix = "-debug"
             resValue("string", "app_name", "NClientV3 Debug")
         }
+        create("RelWithDebInfo") {
+            initWith(buildTypes["release"])
+            versionNameSuffix = "-relwithdebinfo"
+            isDebuggable = true
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -91,6 +95,7 @@ android {
     namespace = "com.maxwai.nclientv3"
     buildFeatures {
         buildConfig = true
+        resValues = true
     }
     androidResources {
         @Suppress("UnstableApiUsage")
@@ -100,19 +105,43 @@ android {
 }
 
 androidComponents {
-    onVariants() { variant ->
-        if (variant.buildType == "debug") return@onVariants
-        var renameTask = tasks.register<CreateRenamedApk>("createRenamedApk${variant.flavorName?.capitalized()}${variant.buildType?.capitalized()}") {
-            this.apkFolder.set(variant.artifacts.get(SingleArtifact.APK))
-            this.builtArtifactsLoader.set(variant.artifacts.getBuiltArtifactsLoader())
-            this.versionName.set(variant.outputs.single().versionName.get().substringBeforeLast("-"))
-            this.suffix.set(if (variant.flavorName == "pre28") "_pre28" else "")
-        }.get()
+    var apkFolder = layout.buildDirectory.dir("outputs/apk").get()
+    var deleteFolder = tasks.register<Delete>("deleteReleaseAPKs") {
+        delete(apkFolder.dir("release"))
+    }
+    tasks.named("assemble") {
+        dependsOn(deleteFolder)
+    }
+    onVariants { variant ->
+        var suffix = ""
+        if (variant.flavorName == "pre28") {
+            suffix += "_pre28"
+        }
+        if (variant.buildType == "debug") {
+            suffix += "_debug"
+        } else if (variant.buildType == "RelWithDebInfo") {
+            suffix += "_relwithdebinfo"
+        }
+        var renameTask =
+            tasks.register<CreateRenamedApk>("createRenamedApk${variant.flavorName?.capitalized()}${variant.buildType?.capitalized()}") {
+                this.apkFolder.set(variant.artifacts.get(SingleArtifact.APK))
+                this.builtArtifactsLoader.set(variant.artifacts.getBuiltArtifactsLoader())
+                this.versionName.set(
+                    variant.outputs.single().versionName.get().substringBeforeLast("-")
+                )
+                this.suffix.set(suffix)
+            }.get()
         tasks.whenTaskAdded {
             if (name == "assemble${variant.flavorName?.capitalized()}${variant.buildType?.capitalized()}") {
                 finalizedBy(renameTask)
+                dependsOn(deleteFolder)
+            } else if (name == "assemble") {
+                dependsOn(renameTask)
             }
         }
+    }
+    beforeVariants {
+        it.enableAndroidTest = false
     }
 }
 
@@ -130,21 +159,21 @@ dependencies {
     implementation("androidx.core:core-splashscreen:1.2.0")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.2.0")
     implementation("androidx.biometric:biometric:1.1.0")
-    implementation("com.google.android.material:material:1.13.0")
+    implementation("com.google.android.material:material:1.14.0")
 
 // Other
     // image loading and caching
-    implementation("com.github.bumptech.glide:glide:5.0.5") {
+    implementation("com.github.bumptech.glide:glide:5.0.7") {
         exclude(group = "com.android.support")
     }
-    implementation("com.github.bumptech.glide:okhttp3-integration:5.0.5@aar")
-    annotationProcessor("com.github.bumptech.glide:compiler:5.0.5")
+    implementation("com.github.bumptech.glide:okhttp3-integration:5.0.7@aar")
+    annotationProcessor("com.github.bumptech.glide:compiler:5.0.7")
     // For Http Connection
-    implementation("com.squareup.okhttp3:okhttp-urlconnection:5.3.2")
+    implementation("com.squareup.okhttp3:okhttp-urlconnection:5.4.0")
     // Used to store the cookies between runs
     implementation("com.github.franmontiel:PersistentCookieJar:v1.0.1")
     // To parse HTML
-    implementation("org.jsoup:jsoup:1.22.1")
+    implementation("org.jsoup:jsoup:1.22.2")
     // color picker
     implementation("com.github.yukuku:ambilwarna:2.0.1")
     // fast scroll
@@ -168,9 +197,15 @@ abstract class CreateRenamedApk : DefaultTask() {
 
     @TaskAction
     fun taskAction() {
-        val builtArtifacts = builtArtifactsLoader.get().load(apkFolder.get()) ?: throw RuntimeException("Cannot load APKs")
-        File(builtArtifacts.elements.single().outputFile).renameTo(
-            File(apkFolder.asFile.get(), "NClientV3_${versionName.get()}${suffix.get()}.apk")
-        )
+        val builtArtifacts = builtArtifactsLoader.get().load(apkFolder.get())
+            ?: throw RuntimeException("Cannot load APKs")
+        val newName = "NClientV3_${versionName.get()}${suffix.get()}.apk"
+        val newFile = apkFolder.asFile.get().resolve(newName)
+        File(builtArtifacts.elements.single().outputFile).renameTo(newFile)
+        if (!suffix.get().contains("_debug")) {
+            val releaseFolder =
+                apkFolder.get().asFile.parentFile.parentFile.resolve("release").resolve(newName)
+            newFile.copyTo(releaseFolder)
+        }
     }
 }

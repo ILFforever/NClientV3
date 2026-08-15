@@ -1,10 +1,12 @@
 package com.maxwai.nclientv3.async.database.export;
 
 import android.net.Uri;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.maxwai.nclientv3.R;
 import com.maxwai.nclientv3.SettingsActivity;
 import com.maxwai.nclientv3.utility.LogUtility;
 
@@ -63,6 +65,7 @@ public class Manager extends Thread {
             if (end != null) context.runOnUiThread(end);
         } catch (IOException e) {
             LogUtility.e("Manager: " + (export ? "export" : "import") + " failed — " + e.getMessage(), e);
+            context.runOnUiThread(() -> Toast.makeText(context, R.string.failed, Toast.LENGTH_SHORT).show());
         }
     }
 

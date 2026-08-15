@@ -6,7 +6,6 @@ import androidx.annotation.NonNull;
 
 import com.maxwai.nclientv3.settings.Global;
 import com.maxwai.nclientv3.settings.Login;
-import com.maxwai.nclientv3.utility.LogUtility;
 import com.maxwai.nclientv3.utility.Utility;
 
 import org.jsoup.Jsoup;
@@ -48,7 +47,7 @@ public class User {
                     Element span = usernameElements.first();
                     Element link = Objects.requireNonNull(span).parent();
                     String username = span.text().trim();
-                    String href = Objects.requireNonNull(link).attr("href");
+                    String href = link.attr("href");
                     String[] parts = href.split("/");
                     Element avatar = link.selectFirst("img.nav-avatar");
                     String avatarUrl = avatar != null ? avatar.attr("src") : null;
@@ -85,6 +84,4 @@ public class User {
     public interface CreateUser {
         void onCreateUser(User user);
     }
-
-
 }

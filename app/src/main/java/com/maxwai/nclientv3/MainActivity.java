@@ -16,7 +16,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.ImageView;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
@@ -57,8 +56,8 @@ import com.maxwai.nclientv3.components.widgets.CustomGridLayoutManager;
 import com.maxwai.nclientv3.settings.Global;
 import com.maxwai.nclientv3.settings.Login;
 import com.maxwai.nclientv3.settings.TagV2;
-import com.maxwai.nclientv3.utility.ImageDownloadUtility;
 import com.maxwai.nclientv3.utility.LogUtility;
+import com.maxwai.nclientv3.utility.ImageDownloadUtility;
 import com.maxwai.nclientv3.utility.Utility;
 
 import java.util.ArrayList;
@@ -137,7 +136,6 @@ public class MainActivity extends BaseActivity
         initializeNavigationView();
         initializeRecyclerView();
         initializePageSwitcherActions();
-        loadStringLogin();
         refresher.setOnRefreshListener(() -> {
             inspector = inspector.cloneInspector(MainActivity.this, resetDataset);
             if (Global.isInfiniteScrollMain()) inspector.setPage(1);
@@ -253,7 +251,7 @@ public class MainActivity extends BaseActivity
         toolbar.setNavigationIcon(R.drawable.ic_arrow_back);
         toolbar.setNavigationOnClickListener(v -> finish());
         navigationView.setNavigationItemSelectedListener(this);
-        onlineFavoriteManager.setVisible(com.maxwai.nclientv3.settings.Login.isLogged());
+        onlineFavoriteManager.setVisible(Login.isLogged(this));
     }
 
     public void setIdOpenedGallery(int idOpenedGallery) {
@@ -444,7 +442,7 @@ public class MainActivity extends BaseActivity
         if (pageParam != null) page = Integer.parseInt(pageParam);
 
         if (favorite) {
-            if (com.maxwai.nclientv3.settings.Login.isLogged()) useFavoriteMode(page);
+            if (Login.isLogged(this)) useFavoriteMode(page);
             else {
                 Intent intent = new Intent(this, FavoriteActivity.class);
                 startActivity(intent);
@@ -483,8 +481,6 @@ public class MainActivity extends BaseActivity
         }
 
     }
-
-
     private void showLogoutForm() {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
         builder.setIcon(R.drawable.ic_exit_to_app).setTitle(R.string.logout).setMessage(R.string.are_you_sure);
@@ -499,7 +495,7 @@ public class MainActivity extends BaseActivity
     @Override
     protected void onResume() {
         super.onResume();
-        com.maxwai.nclientv3.settings.Login.initLogin(this);
+        Login.initLogin(this);
         if (idOpenedGallery != -1) {
             adapter.updateColor(idOpenedGallery);
             idOpenedGallery = -1;

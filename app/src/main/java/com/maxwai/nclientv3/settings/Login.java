@@ -38,22 +38,18 @@ public class Login {
         return accountTag;
     }
 
-    /**
-     * @noinspection SameParameterValue
-     */
     private static void removeCookie(String cookieName) {
         CustomCookieJar cookieJar = (CustomCookieJar) Global.client.cookieJar();
         cookieJar.removeCookie(cookieName);
     }
 
-
     public static void logout() {
         CustomCookieJar cookieJar = (CustomCookieJar) Global.client.cookieJar();
         removeCookie(LOGIN_COOKIE);
         cookieJar.clearSession();
-        updateUser(null);//remove user
-        clearOnlineTags();//remove online tags
-        clearWebViewCookies();//clear webView cookies
+        updateUser(null);
+        clearOnlineTags();
+        clearWebViewCookies();
     }
 
     public static void clearWebViewCookies() {
@@ -61,7 +57,7 @@ public class Login {
             CookieManager.getInstance().removeAllCookies(null);
             CookieManager.getInstance().flush();
         } catch (Throwable ignore) {
-        }//catch InvocationTargetException randomly thrown
+        }
     }
 
     public static void clearOnlineTags() {
@@ -86,9 +82,7 @@ public class Login {
     public static boolean hasCookie(String name) {
         List<Cookie> cookies = Global.client.cookieJar().loadForRequest(BASE_HTTP_URL);
         for (Cookie c : cookies) {
-            if (c.name().equals(name)) {
-                return true;
-            }
+            if (c.name().equals(name)) return true;
         }
         return false;
     }
@@ -109,13 +103,11 @@ public class Login {
         }
         if (context != null) logout();
         return false;
-        //return sessionId!=null;
     }
 
     public static boolean isLogged() {
         return isLogged(null);
     }
-
 
     public static User getUser() {
         return user;
@@ -125,9 +117,7 @@ public class Login {
         Login.user = user;
     }
 
-
     public static boolean isOnlineTags(Tag tag) {
         return Queries.TagTable.isBlackListed(tag);
     }
-
 }

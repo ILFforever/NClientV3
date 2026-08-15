@@ -26,7 +26,7 @@ Info can be found in the [wiki](https://github.com/maxwai/NClientV3/wiki/Migrate
 
 ## Translate App
 
-You can help translate the Project by going to the Crowdin Project [here](https://crowdin.com/project/nclientv3/invite?h=33e3f83681ebaea1bf037ed157d2ea272410538).
+You can help translate the Project by going to the Crowdin Project [here](https://crowdin.com/project/nclientv3/invite?h=a094bdfd22d231bbcd92ddb94b5cc4392828343).
 
 If your desired language is missing, write an issue, the language will be added.
 
@@ -56,7 +56,7 @@ If your desired language is missing, write an issue, the language will be added.
 
 ## Contributors
 
-- [shirokun20](https://github.com/shirokun20) for the initial Bug fixes
+- [shirokun20](https://github.com/shirokun20) for the initial bug fixes
 - [w0x8m](https://github.com/w0x8m) for the new language picker & Chinese Simplified & Traditional translation
 - [ananas7](https://github.com/ananas7) for Arabic translation
 - [raymi7066](https://github.com/raymi7066) for Chinese Simplified translation
@@ -66,6 +66,8 @@ If your desired language is missing, write an issue, the language will be added.
 - crorcetn for Japanese translation
 - [Inori333](https://github.com/inori-3333) for the initial implementation of the new api
 - [Kronos2308](https://github.com/kronos2308) for Spanish translation
+- [Locked_Fog](https://github.com/locked-fog) for Chinese Simplified translation
+- [zhongshen6](https://github.com/zhongshen6) for bug fixes
 
 ## Contributors of original Project
 

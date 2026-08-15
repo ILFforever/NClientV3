@@ -7,7 +7,6 @@ import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Point;
@@ -25,6 +24,7 @@ import androidx.core.content.res.ResourcesCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.maxwai.nclientv3.BuildConfig;
 import com.maxwai.nclientv3.CopyToClipboardActivity;
 import com.maxwai.nclientv3.R;
 import com.maxwai.nclientv3.api.components.GenericGallery;
@@ -83,8 +83,6 @@ public class Global {
     private static boolean infiniteScrollMain, infiniteScrollFavorite, exactTagMatch;
     private static int defaultZoom, offscreenLimit;
     private static Point screenSize;
-    private static final String DEFAULT_USER_AGENT = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N)";
-    private static String userAgent = DEFAULT_USER_AGENT;
 
     public static long recursiveSize(File path) {
         if (path.isFile()) return path.length();
@@ -120,7 +118,7 @@ public class Global {
     }
 
     public static void setLastVersion(Context context) {
-        lastVersion = getVersionName(context);
+        lastVersion = BuildConfig.VERSION_NAME;
         context.getSharedPreferences("Settings", 0).edit().putString("last_version", lastVersion).apply();
     }
 
@@ -143,12 +141,6 @@ public class Global {
 
     public static boolean isDestroyed(Activity activity) {
         return activity.isDestroyed();
-    }
-
-    @NonNull
-    public static String getUserAgent() {
-        String agent = userAgent == null ? DEFAULT_USER_AGENT : userAgent;
-        return agent.replace("\n", " ").trim();
     }
 
     @Nullable
@@ -255,13 +247,7 @@ public class Global {
     }
 
     public static void initFromShared(@NonNull Context context) {
-        Login.initLogin(context);
         SharedPreferences shared = context.getSharedPreferences("Settings", 0);
-        initHttpClient(context);
-        initTitleType(context);
-        loadNotificationChannel(context);
-        NotificationSettings.initializeNotificationManager(context);
-        Global.initStorage(context);
         shared.edit().remove("local_sort").apply();
         localSortType = new LocalSortType(shared.getInt(context.getString(R.string.key_local_sort), 0));
         useRtl = shared.getBoolean(context.getString(R.string.preference_key_use_rtl), false);
@@ -294,7 +280,6 @@ public class Global {
         colPortStat = shared.getInt(context.getString(R.string.key_column_port_stat), 2);
         colLandStat = shared.getInt(context.getString(R.string.key_column_land_stat), 4);
         zoomOneColumn = shared.getBoolean(context.getString(R.string.preference_key_zoom_one_column), false);
-        userAgent = shared.getString(context.getString(R.string.preference_key_user_agent), DEFAULT_USER_AGENT);
         int x = Math.max(0, shared.getInt(context.getString(R.string.key_only_language), Language.ALL.ordinal()));
         sortType = SortType.values()[shared.getInt(context.getString(R.string.key_by_popular), SortType.RECENT_ALL_TIME.ordinal())];
         usageMobile = DataUsageType.values()[shared.getInt(context.getString(R.string.key_mobile_usage), DataUsageType.FULL.ordinal())];
@@ -305,6 +290,12 @@ public class Global {
         }
         onlyLanguage = Language.values()[x];
 
+        Login.initLogin(context);
+        initHttpClient(context);
+        initTitleType(context);
+        loadNotificationChannel(context);
+        NotificationSettings.initializeNotificationManager(context);
+        Global.initStorage(context);
     }
 
     public static boolean isButtonChangePage() {
@@ -322,7 +313,7 @@ public class Global {
     public static void setLocalSortType(Context context, LocalSortType localSortType) {
         context.getSharedPreferences("Settings", 0).edit().putInt(context.getString(R.string.key_local_sort), localSortType.hashCode()).apply();
         Global.localSortType = localSortType;
-        LogUtility.d("Assegning: " + localSortType);
+        LogUtility.d("Assigning: " + localSortType);
     }
 
     public static String getMirror() {
@@ -478,8 +469,8 @@ public class Global {
                 "4:" + Global.UPDATEFOLDER + bools[3] + '\n' +
                 "5:" + Global.SCREENFOLDER + bools[4] + '\n' +
                 "5:" + Global.ZIPFOLDER + bools[5] + '\n' +
-                "5:" + Global.TORRENTFOLDER + bools[5] + '\n' +
-                "6:" + Global.BACKUPFOLDER + bools[6] + '\n'
+                "6:" + Global.TORRENTFOLDER + bools[6] + '\n' +
+                "7:" + Global.BACKUPFOLDER + bools[7] + '\n'
         );
 
         try {
@@ -634,17 +625,6 @@ public class Global {
         }
         //noinspection ResultOfMethodCallIgnored
         file.delete();
-    }
-
-    @NonNull
-    public static String getVersionName(Context context) {
-        try {
-            PackageInfo pInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
-            return Objects.requireNonNull(pInfo.versionName);
-        } catch (PackageManager.NameNotFoundException e) {
-            LogUtility.w("Couldn't get Package Info", e);
-        }
-        return "0.0.0";
     }
 
     public static boolean isExternalStorageManager() {

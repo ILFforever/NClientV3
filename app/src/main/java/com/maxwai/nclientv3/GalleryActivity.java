@@ -53,6 +53,8 @@ import java.util.Objects;
 
 import okhttp3.Call;
 import okhttp3.Callback;
+import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.Response;
 import yuku.ambilwarna.AmbilWarnaDialog;
 
@@ -268,7 +270,7 @@ public class GalleryActivity extends BaseActivity {
     protected void onResume() {
         super.onResume();
         updateColumnCount(false);
-        if (isLocal) supportInvalidateOptionsMenu();
+        supportInvalidateOptionsMenu();
     }
 
     @Override
@@ -310,9 +312,7 @@ public class GalleryActivity extends BaseActivity {
     }
 
     private void downloadTorrent() {
-        if (!Global.hasStoragePermission(this)) {
-            return;
-        }
+        if (!Global.hasStoragePermission(this)) return;
 
         String url = String.format(Locale.US, Utility.getBaseUrl() + "g/%d/download", gallery.getId());
         String referer = String.format(Locale.US, Utility.getBaseUrl() + "g/%d/", gallery.getId());
@@ -321,8 +321,7 @@ public class GalleryActivity extends BaseActivity {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 GalleryActivity.this.runOnUiThread(() ->
-                    Toast.makeText(GalleryActivity.this, R.string.failed, Toast.LENGTH_SHORT).show()
-                );
+                    Toast.makeText(GalleryActivity.this, R.string.failed, Toast.LENGTH_SHORT).show());
             }
 
             @Override
@@ -330,17 +329,14 @@ public class GalleryActivity extends BaseActivity {
                 File file = new File(Global.TORRENTFOLDER, gallery.getId() + ".torrent");
                 Utility.writeStreamToFile(response.body().byteStream(), file);
                 Intent intent = new Intent(Intent.ACTION_VIEW);
-                Uri torrentUri;
-                torrentUri = FileProvider.getUriForFile(GalleryActivity.this, GalleryActivity.this.getPackageName() + ".provider", file);
+                Uri torrentUri = FileProvider.getUriForFile(GalleryActivity.this,
+                    GalleryActivity.this.getPackageName() + ".provider", file);
                 intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 intent.setDataAndType(torrentUri, "application/x-bittorrent");
                 try {
                     GalleryActivity.this.startActivity(intent);
                 } catch (RuntimeException ignore) {
-                    runOnUiThread(() ->
-                        Toast.makeText(GalleryActivity.this, R.string.failed, Toast.LENGTH_SHORT).show()
-                    );
-
+                    runOnUiThread(() -> Toast.makeText(GalleryActivity.this, R.string.failed, Toast.LENGTH_SHORT).show());
                 }
                 file.deleteOnExit();
             }
@@ -421,22 +417,21 @@ public class GalleryActivity extends BaseActivity {
     }
 
     private void addToFavorite() {
-
         boolean wasFavorite = Objects.equals(onlineFavoriteItem.getTitle(), getString(R.string.remove_from_online_favorites));
         String url = String.format(Locale.US, Utility.getBaseUrl() + "api/gallery/%d/%sfavorite", gallery.getId(), wasFavorite ? "un" : "");
         String galleryUrl = String.format(Locale.US, Utility.getBaseUrl() + "g/%d/", gallery.getId());
         LogUtility.d("Calling: " + url);
         new AuthRequest(galleryUrl, url, new Callback() {
-            @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-            }
+                @Override
+                public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                }
 
-            @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                String responseString = response.body().string();
-                boolean nowIsFavorite = responseString.contains("true");
-                updateIcon(nowIsFavorite);
-            }
+                @Override
+                public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                    String responseString = response.body().string();
+                    boolean nowIsFavorite = responseString.contains("true");
+                    updateIcon(nowIsFavorite);
+                }
         }).setMethod("POST", AuthRequest.EMPTY_BODY).start();
     }
 

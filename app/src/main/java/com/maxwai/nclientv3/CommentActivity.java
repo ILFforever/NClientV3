@@ -92,7 +92,6 @@ public class CommentActivity extends BaseActivity {
             new AuthRequest(refererUrl, submitUrl, new Callback() {
                 @Override
                 public void onFailure(@NonNull Call call, @NonNull IOException e) {
-
                 }
 
                 @Override
@@ -169,6 +168,7 @@ public class CommentActivity extends BaseActivity {
              JsonWriter json = new JsonWriter(writer)) {
             json.beginObject();
             json.name("body").value(text);
+            // TODO: this now needs pow and captcha
             json.endObject();
             return writer.toString();
         } catch (IOException ignore) {
