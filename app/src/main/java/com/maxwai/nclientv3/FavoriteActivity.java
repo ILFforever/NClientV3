@@ -143,7 +143,7 @@ public class FavoriteActivity extends BaseActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.sync_favorites) {
-            syncFavorites();
+            confirmFavoriteSync();
         } else if (item.getItemId() == R.id.download_page) {
             if (adapter != null) showDialogDownloadAll();
         } else if (item.getItemId() == R.id.sort_by_name) {
@@ -154,6 +154,16 @@ public class FavoriteActivity extends BaseActivity {
             startActivity(new Intent(this, RandomFavoriteActivity.class));
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void confirmFavoriteSync() {
+        new MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.favorite_sync)
+            .setMessage(R.string.are_you_sure)
+            .setPositiveButton(R.string.favorite_sync,
+                (dialog, which) -> syncFavorites())
+            .setNegativeButton(R.string.cancel, null)
+            .show();
     }
 
     private void syncFavorites() {
