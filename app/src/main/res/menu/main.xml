@@ -4,6 +4,7 @@
     <item
         android:id="@+id/search"
         android:icon="@drawable/ic_search"
+        android:orderInCategory="10"
         android:title="@string/search"
         app:actionViewClass="androidx.appcompat.widget.SearchView"
         app:showAsAction="ifRoom|collapseActionView" />
@@ -16,6 +17,7 @@
     <item
         android:id="@+id/random_favorite"
         android:icon="@drawable/ic_shuffle"
+        android:orderInCategory="20"
         android:title="@string/random_manga"
         app:showAsAction="ifRoom|collapseActionView" />
     <item
@@ -35,9 +37,10 @@
     <item
         android:id="@+id/sync_favorites"
         android:icon="@drawable/ic_refresh"
+        android:orderInCategory="11"
         android:title="@string/favorite_sync"
         android:visible="false"
-        app:showAsAction="ifRoom|collapseActionView" />
+        app:showAsAction="always" />
     <item
         android:id="@+id/add_bookmark"
         android:icon="@drawable/ic_bookmark_border"
