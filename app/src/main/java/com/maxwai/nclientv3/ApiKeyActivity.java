@@ -113,7 +113,6 @@ public class ApiKeyActivity extends GeneralActivity {
 
     private void clearSavedApiKey() {
         AuthStore.clear(this);
-        Login.updateUser(null);
         apiKeyInput.setText("");
         clearApiKey.setEnabled(false);
         updateStatusMessage(getStatusMessage());
@@ -147,7 +146,6 @@ public class ApiKeyActivity extends GeneralActivity {
                 try (response) {
                     if (response.isSuccessful()) {
                         AuthStore.saveApiKey(ApiKeyActivity.this, apiKey, true);
-                        Login.updateUser(null);
                         runOnUiThread(() -> {
                             setLoading(false);
                             Toast.makeText(ApiKeyActivity.this, R.string.login_api_key_saved, Toast.LENGTH_SHORT).show();

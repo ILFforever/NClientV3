@@ -201,7 +201,7 @@ abstract class CreateRenamedApk : DefaultTask() {
             ?: throw RuntimeException("Cannot load APKs")
         val newName = "NClientV3_${versionName.get()}${suffix.get()}.apk"
         val newFile = apkFolder.asFile.get().resolve(newName)
-        File(builtArtifacts.elements.single().outputFile).renameTo(newFile)
+        File(builtArtifacts.elements.single().outputFile).copyTo(newFile, overwrite = true)
         if (!suffix.get().contains("_debug")) {
             val releaseFolder =
                 apkFolder.get().asFile.parentFile.parentFile.resolve("release").resolve(newName)

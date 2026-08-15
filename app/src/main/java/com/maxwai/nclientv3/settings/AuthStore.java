@@ -8,9 +8,12 @@ import androidx.annotation.Nullable;
 
 public final class AuthStore {
     private static final String AUTH_PREFERENCES = "Auth";
+    private static final String USER_TOKEN_PREFERENCES = "UserToken";
     private static final String KEY_TYPE = "type";
     private static final String KEY_SECRET = "secret";
     private static final String KEY_VALID = "valid";
+    private static final String KEY_USER_TOKEN = "token";
+    private static final String KEY_USER_TOKEN_EXPIRY = "expires_at";
 
     private AuthStore() {
     }
@@ -18,6 +21,39 @@ public final class AuthStore {
     @NonNull
     private static SharedPreferences getPreferences(@NonNull Context context) {
         return context.getSharedPreferences(AUTH_PREFERENCES, Context.MODE_PRIVATE);
+    }
+
+    @NonNull
+    private static SharedPreferences getUserTokenPreferences(@NonNull Context context) {
+        return context.getSharedPreferences(USER_TOKEN_PREFERENCES, Context.MODE_PRIVATE);
+    }
+
+    public static void saveUserToken(@NonNull Context context, @NonNull String token, long expiresAt) {
+        getUserTokenPreferences(context).edit()
+            .putString(KEY_USER_TOKEN, token.trim())
+            .putLong(KEY_USER_TOKEN_EXPIRY, expiresAt)
+            .commit();
+    }
+
+    public static void clearUserToken(@NonNull Context context) {
+        getUserTokenPreferences(context).edit().clear().commit();
+    }
+
+    @Nullable
+    public static String getUserToken(@NonNull Context context) {
+        SharedPreferences preferences = getUserTokenPreferences(context);
+        String token = preferences.getString(KEY_USER_TOKEN, null);
+        long expiresAt = preferences.getLong(KEY_USER_TOKEN_EXPIRY, 0);
+        if (token == null || token.trim().isEmpty() || expiresAt <= System.currentTimeMillis()) {
+            clearUserToken(context);
+            return null;
+        }
+        return token.trim();
+    }
+
+    public static long getUserTokenExpiry(@NonNull Context context) {
+        return getUserToken(context) == null ? 0
+            : getUserTokenPreferences(context).getLong(KEY_USER_TOKEN_EXPIRY, 0);
     }
 
     public static void saveApiKey(@NonNull Context context, @NonNull String apiKey, boolean valid) {

@@ -62,8 +62,9 @@ public class CustomInterceptor implements Interceptor {
         r.removeHeader("rec");
         r.addHeader("User-Agent", "NClient/" + BuildConfig.VERSION_NAME + " (https://github.com/ILFforever/NClientV3)");
         Response response = chain.proceed(r.build());
+        boolean apiV2Request = request.url().encodedPath().startsWith("/api/v2/");
         if ((response.code() == HttpURLConnection.HTTP_UNAVAILABLE ||
-            response.code() == HttpURLConnection.HTTP_FORBIDDEN) &&
+            (response.code() == HttpURLConnection.HTTP_FORBIDDEN && !apiV2Request)) &&
             (!rec || !MANAGER.endInterceptor())) {
             CookieManager.getInstance().removeAllCookies(null);
             CookieInterceptor interceptor = new CookieInterceptor(MANAGER);

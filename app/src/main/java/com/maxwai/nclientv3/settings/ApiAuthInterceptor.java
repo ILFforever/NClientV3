@@ -33,21 +33,33 @@ public class ApiAuthInterceptor implements Interceptor {
             return chain.proceed(request);
         }
 
-        Request.Builder r = request.newBuilder();
-        r.addHeader("User-Agent", "NClient/" + BuildConfig.VERSION_NAME + " (https://github.com/maxwai/NClientV3)");
+        Request.Builder r = request.newBuilder()
+            .header("User-Agent", "NClient/" + BuildConfig.VERSION_NAME + " (https://github.com/ILFforever/NClientV3)");
 
-        if (!AuthStore.hasValidApiKey(context)) return chain.proceed(r.build());
-
-        String authorization = AuthStore.getAuthorizationHeader(context);
+        String authorization = Login.getUserTokenAuthorizationHeader();
+        boolean usingApiKey = false;
+        boolean favoritesRequest = request.url().encodedPath().contains("/favorite");
+        if (authorization == null && AuthStore.hasValidApiKey(context)) {
+            authorization = AuthStore.getAuthorizationHeader(context);
+            usingApiKey = authorization != null;
+        }
         if (authorization == null) return chain.proceed(r.build());
 
-        Request authenticated =r.header("Authorization", authorization)
+        if (favoritesRequest)
+            LogUtility.d("Favorites API auth: " + (usingApiKey ? "API key" : "user token"));
+
+        Request authenticated = r.header("Authorization", authorization)
             .build();
         Response response = chain.proceed(authenticated);
-        if (response.code() == 401 || response.code() == 403) {
-            AuthStore.setApiKeyValidation(context, false);
-        } else if (response.isSuccessful()) {
-            AuthStore.setApiKeyValidation(context, true);
+        if (favoritesRequest)
+            LogUtility.d("Favorites API response: " + response.code() + " "
+                + response.request().url().encodedPath());
+        if (usingApiKey) {
+            if (response.code() == 401 || response.code() == 403) {
+                AuthStore.setApiKeyValidation(context, false);
+            } else if (response.isSuccessful()) {
+                AuthStore.setApiKeyValidation(context, true);
+            }
         }
         return response;
     }

@@ -425,6 +425,10 @@ public class InspectorV3 extends Thread implements Parcelable {
         if (!json.has("result"))
             throw new InvalidResponseException();
         JSONArray results = json.getJSONArray("result");
+        if (requestType == ApiRequestType.FAVORITE)
+            LogUtility.d("Favorites API page metadata: results=" + results.length()
+                + ", total=" + json.optLong("total", -1)
+                + ", pages=" + json.optInt("num_pages", -1));
         galleries = new ArrayList<>(results.length());
         for (int i = 0; i < results.length(); i++) {
             galleries.add(SimpleGallery.fromV2ListItem(context.get(), results.getJSONObject(i)));

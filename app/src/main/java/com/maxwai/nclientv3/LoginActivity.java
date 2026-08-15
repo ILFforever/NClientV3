@@ -11,12 +11,9 @@ import androidx.appcompat.widget.Toolbar;
 
 import com.maxwai.nclientv3.components.activities.GeneralActivity;
 import com.maxwai.nclientv3.loginapi.User;
-import com.maxwai.nclientv3.settings.Global;
 import com.maxwai.nclientv3.settings.Login;
-import com.maxwai.nclientv3.utility.LogUtility;
 import com.maxwai.nclientv3.utility.Utility;
 
-import okhttp3.Cookie;
 
 /**
  * A login screen that offers login via email/password.
@@ -70,13 +67,7 @@ public class LoginActivity extends GeneralActivity {
         }
 
         private void applyAllCookies(String cookieString) {
-            java.util.List<Cookie> cookieList = new java.util.ArrayList<>();
-            for (String part : cookieString.split(";")) {
-                part = part.trim();
-                Cookie cookie = Cookie.parse(Login.BASE_HTTP_URL, part + "; Path=/");
-                if (cookie != null) cookieList.add(cookie);
-            }
-            Global.client.cookieJar().saveFromResponse(Login.BASE_HTTP_URL, cookieList);
+            Login.importCookieHeader(LoginActivity.this, cookieString);
             User.createUser(LoginActivity.this, null);
             finish();
         }

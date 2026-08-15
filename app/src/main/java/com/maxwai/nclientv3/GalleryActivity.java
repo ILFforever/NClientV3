@@ -45,6 +45,9 @@ import com.maxwai.nclientv3.settings.Login;
 import com.maxwai.nclientv3.utility.LogUtility;
 import com.maxwai.nclientv3.utility.Utility;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -253,9 +256,10 @@ public class GalleryActivity extends BaseActivity {
 
     private void menuItemsVisible(Menu menu) {
         boolean isLogged = Login.isLogged();
+        boolean canUseAuthenticatedApi = Login.canAccessAuthenticatedApi(this);
         boolean isValidOnline = gallery.isValid() && !isLocal;
         onlineFavoriteItem = menu.findItem(R.id.add_online_gallery);
-        onlineFavoriteItem.setVisible(isValidOnline && isLogged);
+        onlineFavoriteItem.setVisible(isValidOnline && canUseAuthenticatedApi);
         menu.findItem(R.id.favorite_manager).setVisible(isValidOnline);
         menu.findItem(R.id.download_gallery).setVisible(isValidOnline);
         menu.findItem(R.id.related).setVisible(isValidOnline);
@@ -418,21 +422,33 @@ public class GalleryActivity extends BaseActivity {
 
     private void addToFavorite() {
         boolean wasFavorite = Objects.equals(onlineFavoriteItem.getTitle(), getString(R.string.remove_from_online_favorites));
-        String url = String.format(Locale.US, Utility.getBaseUrl() + "api/gallery/%d/%sfavorite", gallery.getId(), wasFavorite ? "un" : "");
-        String galleryUrl = String.format(Locale.US, Utility.getBaseUrl() + "g/%d/", gallery.getId());
+        String url = String.format(Locale.US, Utility.getApiBaseUrl() + "galleries/%d/favorite", gallery.getId());
         LogUtility.d("Calling: " + url);
-        new AuthRequest(galleryUrl, url, new Callback() {
-                @Override
-                public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                }
+        Global.getClient(this)
+            .newCall(new Request.Builder().url(url)
+                .method(wasFavorite ? "DELETE" : "POST", RequestBody.EMPTY)
+                .build())
+            .enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                runOnUiThread(() -> Toast.makeText(GalleryActivity.this, R.string.failed, Toast.LENGTH_SHORT).show());
+            }
 
-                @Override
-                public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                    String responseString = response.body().string();
-                    boolean nowIsFavorite = responseString.contains("true");
-                    updateIcon(nowIsFavorite);
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                try (response) {
+                    if (!response.isSuccessful() || response.body() == null) {
+                        runOnUiThread(() -> Toast.makeText(GalleryActivity.this, R.string.failed, Toast.LENGTH_SHORT).show());
+                        return;
+                    }
+                    JSONObject result = new JSONObject(response.body().string());
+                    updateIcon(result.getBoolean("favorited"));
+                } catch (IOException | JSONException e) {
+                    LogUtility.e("Unable to update online favorite", e);
+                    runOnUiThread(() -> Toast.makeText(GalleryActivity.this, R.string.failed, Toast.LENGTH_SHORT).show());
                 }
-        }).setMethod("POST", AuthRequest.EMPTY_BODY).start();
+            }
+        });
     }
 
     private void updateColumnCount(boolean increase) {

@@ -48,7 +48,6 @@ import java.util.List;
 import java.util.Objects;
 
 import me.zhanghai.android.fastscroll.FastScrollerBuilder;
-import okhttp3.Cookie;
 import okhttp3.OkHttpClient;
 
 public class Global {
@@ -348,12 +347,12 @@ public class Global {
                 )
             );
         builder.addInterceptor(new CustomInterceptor(context.getApplicationContext(), true));
+        builder.addInterceptor(new ApiAuthInterceptor(context.getApplicationContext(), false));
         client = builder.build();
+        Login.importWebViewCookies(context);
+        Login.restorePersistedAccessToken(context);
         client.dispatcher().setMaxRequests(25);
         client.dispatcher().setMaxRequestsPerHost(25);
-        for (Cookie cookie : client.cookieJar().loadForRequest(Login.BASE_HTTP_URL)) {
-            LogUtility.d("Cookie: " + cookie);
-        }
         Login.isLogged(context);
     }
 

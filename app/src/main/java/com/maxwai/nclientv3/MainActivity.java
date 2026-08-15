@@ -251,7 +251,7 @@ public class MainActivity extends BaseActivity
         toolbar.setNavigationIcon(R.drawable.ic_arrow_back);
         toolbar.setNavigationOnClickListener(v -> finish());
         navigationView.setNavigationItemSelectedListener(this);
-        onlineFavoriteManager.setVisible(Login.isLogged(this));
+        onlineFavoriteManager.setVisible(Login.canAccessAuthenticatedApi(this));
     }
 
     public void setIdOpenedGallery(int idOpenedGallery) {
@@ -442,7 +442,7 @@ public class MainActivity extends BaseActivity
         if (pageParam != null) page = Integer.parseInt(pageParam);
 
         if (favorite) {
-            if (Login.isLogged(this)) useFavoriteMode(page);
+            if (Login.canAccessAuthenticatedApi(this)) useFavoriteMode(page);
             else {
                 Intent intent = new Intent(this, FavoriteActivity.class);
                 startActivity(intent);
@@ -486,7 +486,7 @@ public class MainActivity extends BaseActivity
         builder.setIcon(R.drawable.ic_exit_to_app).setTitle(R.string.logout).setMessage(R.string.are_you_sure);
         builder.setPositiveButton(R.string.yes, (dialogInterface, i) -> {
             Login.logout();
-            onlineFavoriteManager.setVisible(false);
+            onlineFavoriteManager.setVisible(Login.canAccessAuthenticatedApi(this));
             loadStringLogin();
         }).setNegativeButton(R.string.no, null).show();
     }
@@ -501,7 +501,7 @@ public class MainActivity extends BaseActivity
             idOpenedGallery = -1;
         }
         loadStringLogin();
-        onlineFavoriteManager.setVisible(com.maxwai.nclientv3.settings.Login.isLogged(this));
+        onlineFavoriteManager.setVisible(Login.canAccessAuthenticatedApi(this));
         SharedPreferences settings = getSharedPreferences("Settings", 0);
         LocaleListCompat setLocaleList = AppCompatDelegate.getApplicationLocales();
         settings.edit().putString(getString(R.string.preference_key_language),
