@@ -64,6 +64,11 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.ViewHold
             context, c.getPosterId(), c.getPosterSlug(), c.getUsername());
         holder.user.setOnClickListener(openProfile);
         holder.userImage.setOnClickListener(openProfile);
+        holder.layout.setOnLongClickListener(v -> {
+            com.maxwai.nclientv3.UserProfileActivity.start(
+                context, c.getPosterId(), c.getPosterSlug(), c.getUsername());
+            return true;
+        });
         holder.body.setText(c.getComment());
         holder.date.setText(format.format(c.getPostDate()));
         holder.close.setOnClickListener(v -> {
