@@ -86,10 +86,14 @@ public class User implements Parcelable {
     }
 
     public Uri getAvatarUrl() {
-        return Uri.parse(String.format(Locale.US, "https://i.%s/%s", Utility.getHost(), avatarUrl));
+        return Uri.parse(String.format(Locale.US, "https://%s/%s", Utility.getImageHost(), avatarUrl));
     }
 
     public String getUsername() {
         return username;
+    }
+
+    public String getSlug() {
+        return slug;
     }
 }

@@ -122,6 +122,11 @@ public class MainActivity extends BaseActivity
     private DrawerLayout drawerLayout;
     private Toolbar toolbar;
     private boolean setting = false;
+    /**
+     * The profile is fetched asynchronously and can land long after onResume has painted the
+     * drawer, so redraw whenever it changes instead of only reading it once.
+     */
+    private final Login.UserListener userListener = user -> runOnUiThread(this::loadStringLogin);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -137,6 +142,7 @@ public class MainActivity extends BaseActivity
         LogUtility.d("Main started with mode " + modeType);
         //init views and actions
         findUsefulViews();
+        Login.addUserListener(userListener);
         initializeToolbar();
         initializeNavigationView();
         initializeRecyclerView();
@@ -503,6 +509,9 @@ public class MainActivity extends BaseActivity
             idOpenedGallery = -1;
         }
         loadStringLogin();
+        // Paint whatever we already know, then fill in the profile if this is a cold start (or a
+        // return from the login flow) where the credentials are present but the profile is not.
+        Login.ensureUserLoaded(this);
         SharedPreferences settings = getSharedPreferences("Settings", 0);
         LocaleListCompat setLocaleList = AppCompatDelegate.getApplicationLocales();
         settings.edit().putString(getString(R.string.preference_key_language),
@@ -523,6 +532,12 @@ public class MainActivity extends BaseActivity
             filteringTag = false;
         }
         invalidateOptionsMenu();
+    }
+
+    @Override
+    protected void onDestroy() {
+        Login.removeUserListener(userListener);
+        super.onDestroy();
     }
 
     @Override

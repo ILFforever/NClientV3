@@ -3,6 +3,7 @@ package com.maxwai.nclientv3;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
@@ -24,6 +25,8 @@ import com.maxwai.nclientv3.settings.FavoriteSyncManager;
 import com.maxwai.nclientv3.utility.Utility;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 
@@ -121,7 +124,7 @@ public class FavoriteActivity extends BaseActivity {
             | MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW);
         syncItem = menu.findItem(R.id.sync_favorites);
         syncItem.setVisible(true);
-        syncItem.setEnabled(!syncRunning);
+        syncItem.setEnabled(!syncRunning && !FavoriteSyncManager.isRunning());
         MenuItem randomItem = menu.findItem(R.id.random_favorite);
         randomItem.setVisible(true);
         randomItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
@@ -178,11 +181,16 @@ public class FavoriteActivity extends BaseActivity {
             Toast.makeText(this, R.string.favorite_sync_login_required, Toast.LENGTH_LONG).show();
             return;
         }
+        // A sync started before this Activity existed may still be running.
+        if (FavoriteSyncManager.isRunning()) {
+            Toast.makeText(this, R.string.favorite_sync_in_progress, Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         syncRunning = true;
         if (syncItem != null) syncItem.setEnabled(false);
         refresher.setRefreshing(true);
-        FavoriteSyncManager.sync(this, new FavoriteSyncManager.Listener() {
+        boolean started = FavoriteSyncManager.sync(this, new FavoriteSyncManager.Listener() {
             @Override
             public void onProgress(boolean uploading, int completed, int total) {
                 runOnUiThread(() -> {
@@ -211,6 +219,8 @@ public class FavoriteActivity extends BaseActivity {
                 });
             }
         });
+        // Lost the race with a sync started elsewhere; hand the UI back.
+        if (!started) resetSyncUi();
     }
 
     private void finishSync(FavoriteSyncManager.Result result) {
@@ -218,10 +228,28 @@ public class FavoriteActivity extends BaseActivity {
         String query = searchView == null ? null : searchView.getQuery().toString();
         pageSwitcher.setTotalPage(calculatePages(query));
         if (adapter != null) adapter.forceReload();
-        int message = result.failed == 0
-            ? R.string.favorite_sync_complete : R.string.favorite_sync_partial;
-        Toast.makeText(this, getString(message,
-            result.downloaded, result.uploaded, result.failed), Toast.LENGTH_LONG).show();
+        Toast.makeText(this, describeSync(result), Toast.LENGTH_SHORT).show();
+    }
+
+    /**
+     * Builds the result toast from only the counts that are non-zero, so a quiet sync says so in
+     * three words instead of listing four zeroes.
+     */
+    private String describeSync(FavoriteSyncManager.Result result) {
+        List<String> parts = new ArrayList<>();
+        if (result.downloaded > 0)
+            parts.add(getString(R.string.favorite_sync_added, result.downloaded));
+        if (result.uploaded > 0)
+            parts.add(getString(R.string.favorite_sync_uploaded, result.uploaded));
+        int removed = result.removedLocal + result.removedRemote;
+        if (removed > 0) parts.add(getString(R.string.favorite_sync_removed, removed));
+        if (result.failed > 0)
+            parts.add(getString(R.string.favorite_sync_failed_count, result.failed));
+
+        if (parts.isEmpty()) return getString(R.string.favorite_sync_no_changes);
+        String summary = TextUtils.join(", ", parts);
+        return getString(result.firstSync
+            ? R.string.favorite_sync_first_run : R.string.favorite_sync_result, summary);
     }
 
     private void resetSyncUi() {

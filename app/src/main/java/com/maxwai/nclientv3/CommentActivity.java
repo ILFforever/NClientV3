@@ -44,7 +44,10 @@ public class CommentActivity extends BaseActivity {
     private CommentAdapter adapter;
     private PageSwitcher pageSwitcher;
     private int galleryId;
-    private List<Comment> allComments;
+    /**
+     * Comments of the page currently shown; the API paginates server side.
+     */
+    private List<Comment> comments;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,7 +78,7 @@ public class CommentActivity extends BaseActivity {
         refresher = findViewById(R.id.refresher);
         refresher.setOnRefreshListener(() -> {
             pageSwitcher.setActualPage(1);
-            loadComments(1, true);
+            loadComments(1);
         });
         EditText commentText = findViewById(R.id.commentText);
         findViewById(R.id.card).setVisibility(Login.isLogged() ? View.VISIBLE : View.GONE);
@@ -107,10 +110,10 @@ public class CommentActivity extends BaseActivity {
                             }
                         }
                         if (comment != null && adapter != null) {
-                            if (allComments == null) {
-                                allComments = new ArrayList<>();
+                            if (comments == null) {
+                                comments = new ArrayList<>();
                             }
-                            allComments.add(0, comment);
+                            comments.add(0, comment);
                             adapter.addComment(comment);
                             if (pageSwitcher.getActualPage() > 1) {
                                 pageSwitcher.setActualPage(1);
@@ -124,33 +127,25 @@ public class CommentActivity extends BaseActivity {
         recycler.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
         refresher.setRefreshing(true);
         new CommentCountFetcher(CommentActivity.this, id).start();
-        loadComments(1, true);
-    }
-
-    private void loadComments(int page, boolean fetchAll) {
-        new CommentsFetcher(CommentActivity.this, galleryId, page, fetchAll).start();
+        loadComments(1);
     }
 
     private void loadComments(int page) {
-        loadComments(page, false);
+        new CommentsFetcher(CommentActivity.this, galleryId, page).start();
     }
 
     public void refreshCurrentPage() {
-        loadComments(pageSwitcher.getActualPage(), false);
+        loadComments(pageSwitcher.getActualPage());
     }
 
     public void removeComment(int commentId) {
-        if (allComments != null) {
-            allComments.removeIf(c -> c.getId() == commentId);
+        if (comments != null) {
+            comments.removeIf(c -> c.getId() == commentId);
         }
     }
 
-    public void setAllComments(List<Comment> comments) {
-        this.allComments = comments;
-    }
-
-    public List<Comment> getAllComments() {
-        return allComments;
+    public void setComments(List<Comment> comments) {
+        this.comments = comments;
     }
 
     public void updatePagination(int totalPages) {

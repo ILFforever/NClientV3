@@ -58,7 +58,6 @@ public class ZoomActivity extends GeneralActivity {
     private static final int SHOW_FLAGS = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
     private static final String VOLUME_SIDE_KEY = "volumeSide";
     private static final String SCROLL_TYPE_KEY = "zoomScrollType";
-    private static final int PREFETCH_DELAY_MS = 150;
     private static final boolean DEBUG = false;
     
     private GenericGallery gallery;
@@ -226,19 +225,12 @@ public class ZoomActivity extends GeneralActivity {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                int scrollType = getSharedPreferences("Settings", 0).getInt(SCROLL_TYPE_KEY, ScrollType.HORIZONTAL.ordinal());
-                if (scrollType == ScrollType.WEBTOON.ordinal()) {
-                    final int targetPage = Math.max(0, Math.min(seekBar.getProgress(), gallery.getPageCount() - 1));
-                    mWebtoonRecyclerView.scrollToPosition(targetPage);
-                    mWebtoonRecyclerView.postDelayed(() -> makeNearRequestsWebtoon(targetPage), PREFETCH_DELAY_MS);
-                } else {
-                    changePage(seekBar.getProgress());
-                }
+                goToPage(seekBar.getProgress());
             }
         });
 
 
-        changePage(page);
+        goToPage(page);
         setPageText(page + 1);
         seekBar.setProgress(page);
     }
@@ -294,10 +286,8 @@ public class ZoomActivity extends GeneralActivity {
 
     public void changeClosePage(boolean next) {
         if (Global.useRtl()) next = !next;
-        
-        int currentScrollType = getSharedPreferences("Settings", 0).getInt(SCROLL_TYPE_KEY, ScrollType.HORIZONTAL.ordinal());
-        
-        if (currentScrollType == ScrollType.WEBTOON.ordinal()) {
+
+        if (isWebtoon()) {
             CustomLinearLayoutManager layoutManager = (CustomLinearLayoutManager) mWebtoonRecyclerView.getLayoutManager();
             if (layoutManager != null) {
                 int currentPosition = layoutManager.findFirstCompletelyVisibleItemPosition();
@@ -315,8 +305,7 @@ public class ZoomActivity extends GeneralActivity {
                 
                 if (targetPosition != currentPosition) {
                     mWebtoonRecyclerView.smoothScrollToPosition(targetPosition);
-                    final int finalTargetPosition = targetPosition;
-                    mWebtoonRecyclerView.postDelayed(() -> makeNearRequestsWebtoon(finalTargetPosition), PREFETCH_DELAY_MS);
+                    makeNearRequestsWebtoon(targetPosition);
                 }
             }
         } else {
@@ -353,6 +342,27 @@ public class ZoomActivity extends GeneralActivity {
         mViewPager.setCurrentItem(newPage);
     }
 
+    private boolean isWebtoon() {
+        return getSharedPreferences("Settings", 0).getInt(SCROLL_TYPE_KEY, ScrollType.HORIZONTAL.ordinal())
+            == ScrollType.WEBTOON.ordinal();
+    }
+
+    /**
+     * Jumps to a page in whichever reader view is currently active. The webtoon
+     * RecyclerView and the ViewPager are separate views, so a page change has to be
+     * routed to the visible one.
+     */
+    private void goToPage(int newPage) {
+        final int target = Math.max(0, Math.min(newPage, gallery.getPageCount() - 1));
+        if (isWebtoon()) {
+            actualPage = target;
+            mWebtoonRecyclerView.scrollToPosition(target);
+            makeNearRequestsWebtoon(target);
+        } else {
+            changePage(target);
+        }
+    }
+
     private void changeScrollTypeDialog() {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
         int scrollType = getSharedPreferences("Settings", 0).getInt(SCROLL_TYPE_KEY, ScrollType.HORIZONTAL.ordinal());
@@ -363,16 +373,9 @@ public class ZoomActivity extends GeneralActivity {
         });
         builder.setPositiveButton(R.string.ok, (dialog, which) -> {
             if (tmpScrollType != scrollType) {
+                // switchToScrollType persists the new type, so goToPage routes to the new view
                 switchToScrollType(tmpScrollType);
-                int page = Math.max(0, Math.min(actualPage, gallery.getPageCount() - 1));
-                if (tmpScrollType == ScrollType.WEBTOON.ordinal()) {
-                    if (mWebtoonRecyclerView != null) {
-                        mWebtoonRecyclerView.scrollToPosition(page);
-                        mWebtoonRecyclerView.postDelayed(() -> makeNearRequestsWebtoon(page), PREFETCH_DELAY_MS);
-                    }
-                } else {
-                    changePage(page);
-                }
+                goToPage(actualPage);
             }
         }).setNegativeButton(R.string.cancel, null);
         builder.show();
@@ -462,8 +465,7 @@ public class ZoomActivity extends GeneralActivity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
         if (id == R.id.rotate) {
-            int scrollType = getSharedPreferences("Settings", 0).getInt(SCROLL_TYPE_KEY, ScrollType.HORIZONTAL.ordinal());
-            if (scrollType == ScrollType.WEBTOON.ordinal()) {
+            if (isWebtoon()) {
                 CustomLinearLayoutManager layoutManager = (CustomLinearLayoutManager) mWebtoonRecyclerView.getLayoutManager();
                 if (layoutManager != null) {
                     int position = layoutManager.findFirstVisibleItemPosition();
@@ -542,8 +544,7 @@ public class ZoomActivity extends GeneralActivity {
 
         for (int i = currentPage - offScreenLimit; i <= currentPage + offScreenLimit; i++) {
             if (i >= 0 && i < gallery.getPageCount() && i != currentPage) {
-                // preloadPage does its own findViewHolderForAdapterPosition internally
-                mWebtoonAdapter.preloadPage(mWebtoonRecyclerView, i);
+                mWebtoonAdapter.preloadPage(i);
             }
         }
     }
@@ -565,8 +566,7 @@ public class ZoomActivity extends GeneralActivity {
     }
 
     private Drawable getCurrentImageDrawable() {
-        int scrollType = getSharedPreferences("Settings", 0).getInt(SCROLL_TYPE_KEY, ScrollType.HORIZONTAL.ordinal());
-        if (scrollType == ScrollType.WEBTOON.ordinal()) {
+        if (isWebtoon()) {
             CustomLinearLayoutManager layoutManager = (CustomLinearLayoutManager) mWebtoonRecyclerView.getLayoutManager();
             if (layoutManager != null) {
                 int position = layoutManager.findFirstVisibleItemPosition();
@@ -587,8 +587,7 @@ public class ZoomActivity extends GeneralActivity {
     }
 
     private int getCurrentPage() {
-        int scrollType = getSharedPreferences("Settings", 0).getInt(SCROLL_TYPE_KEY, ScrollType.HORIZONTAL.ordinal());
-        if (scrollType == ScrollType.WEBTOON.ordinal()) {
+        if (isWebtoon()) {
             CustomLinearLayoutManager layoutManager = (CustomLinearLayoutManager) mWebtoonRecyclerView.getLayoutManager();
             if (layoutManager != null) {
                 int position = layoutManager.findFirstVisibleItemPosition();

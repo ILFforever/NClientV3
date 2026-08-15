@@ -476,12 +476,17 @@ public class PhotoViewAttacher implements View.OnTouchListener,
     }
 
     public void update() {
-        if (mZoomEnabled) {
-            // Update the base matrix using the current drawable
-            updateBaseMatrix(mImageView.getDrawable());
-        } else {
-            // Reset the Matrix...
+        // Deviation from upstream PhotoView: the base matrix maps the drawable onto the
+        // view, so it has to track the current drawable whether or not zoom is enabled.
+        // Upstream recomputed it only in the zoom-enabled branch, which left a recycled
+        // ImageView drawing a new image at the previous drawable's scale. PhotoView forces
+        // ScaleType.MATRIX, so nothing else corrects that. updateBaseMatrix ends in
+        // resetMatrix(), so the zoom-disabled path keeps the reset it had before.
+        Drawable drawable = mImageView.getDrawable();
+        if (drawable == null) {
             resetMatrix();
+        } else {
+            updateBaseMatrix(drawable);
         }
     }
 

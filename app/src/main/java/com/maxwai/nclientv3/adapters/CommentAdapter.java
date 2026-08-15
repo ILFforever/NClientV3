@@ -59,6 +59,11 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.ViewHold
         holder.layout.setOnClickListener(v1 -> context.runOnUiThread(() -> holder.body.setMaxLines(holder.body.getMaxLines() == 7 ? 999 : 7)));
         holder.close.setVisibility(c.getPosterId() != userId ? View.GONE : View.VISIBLE);
         holder.user.setText(c.getUsername());
+        // Name and avatar both open the poster's profile, as on the website.
+        View.OnClickListener openProfile = v -> com.maxwai.nclientv3.UserProfileActivity.start(
+            context, c.getPosterId(), c.getPosterSlug(), c.getUsername());
+        holder.user.setOnClickListener(openProfile);
+        holder.userImage.setOnClickListener(openProfile);
         holder.body.setText(c.getComment());
         holder.date.setText(format.format(c.getPostDate()));
         holder.close.setOnClickListener(v -> {

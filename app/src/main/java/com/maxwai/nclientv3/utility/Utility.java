@@ -46,6 +46,41 @@ public class Utility {
         return Global.getMirror();
     }
 
+    /**
+     * Host serving full-size page images.
+     * <p>
+     * {@code /api/v2/config} advertises the numbered servers (i1-i4), but some ISPs DNS-sinkhole
+     * those subdomains to a blocklist address, which makes every image request hang until it
+     * times out while the API host itself keeps working. The unnumbered alias is not sinkholed
+     * and serves the same content, so it is used here. Keep image hosts going through this
+     * method rather than hardcoding a prefix, so there is one place to change.
+     */
+    public static String getImageHost() {
+        return "i." + getHost();
+    }
+
+    /**
+     * Host serving thumbnails and covers. See {@link #getImageHost()} for why this is not t1.
+     */
+    public static String getThumbHost() {
+        return "t." + getHost();
+    }
+
+    /**
+     * Rewrites a numbered CDN host in an absolute URL to the alias host. Absolute i1-i4/t1-t4
+     * URLs reach us from scraped HTML and from rows written by older versions, so they never go
+     * through {@link #getImageHost()} and would otherwise still hit a sinkholed subdomain.
+     */
+    public static String normalizeImageHost(String url) {
+        if (url == null || url.isEmpty()) return url;
+        String host = getHost();
+        for (int i = 1; i <= 4; i++) {
+            url = url.replace("://i" + i + "." + host, "://" + getImageHost());
+            url = url.replace("://t" + i + "." + host, "://" + getThumbHost());
+        }
+        return url;
+    }
+
     private static void parseEscapedCharacter(Reader reader, Writer writer) throws IOException {
         int toCreate, read;
         switch (read = reader.read()) {

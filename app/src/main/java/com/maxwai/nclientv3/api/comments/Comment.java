@@ -101,6 +101,10 @@ public class Comment implements Parcelable {
         return poster.getUsername();
     }
 
+    public String getPosterSlug() {
+        return poster.getSlug();
+    }
+
     public Uri getAvatarUrl() {
         return poster.getAvatarUrl();
     }

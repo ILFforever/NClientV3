@@ -7,7 +7,6 @@ import android.webkit.CookieManager;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.maxwai.nclientv3.MainActivity;
 import com.maxwai.nclientv3.R;
 import com.maxwai.nclientv3.api.components.Tag;
 import com.maxwai.nclientv3.async.database.Queries;
@@ -19,6 +18,7 @@ import com.maxwai.nclientv3.utility.Utility;
 
 import java.util.List;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Cookie;
@@ -29,6 +29,7 @@ import org.json.JSONObject;
 public class Login {
     public static final String LOGIN_COOKIE = "access_token";
     public static HttpUrl BASE_HTTP_URL;
+    private static final List<UserListener> userListeners = new CopyOnWriteArrayList<>();
     private static User user;
     private static boolean accountTag;
     private static Context applicationContext;
@@ -56,7 +57,12 @@ public class Login {
         updateUser(null);
         clearOnlineTags();
         clearWebViewCookies();
-        if (applicationContext != null) AuthStore.clearUserToken(applicationContext);
+        if (applicationContext != null) {
+            AuthStore.clearUserToken(applicationContext);
+            // A baseline describes one account's library; keeping it across a logout would let
+            // the next account's first sync read the previous account's favorites as deletions.
+            FavoriteSyncManager.resetBaseline(applicationContext);
+        }
     }
 
     public static void clearWebViewCookies() {
@@ -181,14 +187,7 @@ public class Login {
         boolean loggedIn = hasCookie(LOGIN_COOKIE);
         LogUtility.d("Login cookie present: " + loggedIn);
         if (loggedIn) {
-            if (context != null && user == null) User.createUser(context, user -> {
-                if (user != null) {
-                    new LoadTags(context).start();
-                    if (context instanceof MainActivity) {
-                        ((MainActivity) context).runOnUiThread(((MainActivity) context)::loadStringLogin);
-                    }
-                }
-            });
+            if (context != null) ensureUserLoaded(context);
             return true;
         }
         if (context != null) logout();
@@ -199,12 +198,44 @@ public class Login {
         return isLogged(null);
     }
 
+    /**
+     * Loads the logged-in user's profile if we hold credentials but have not fetched it yet.
+     * The fetch is asynchronous and lands in {@link #updateUser}, so anything that displays the
+     * profile must observe {@link UserListener} rather than read {@link #getUser()} once and
+     * assume it is populated. Unlike {@link #isLogged(Context)} this never logs the user out.
+     */
+    public static void ensureUserLoaded(@NonNull Context context) {
+        if (user != null || !hasCookie(LOGIN_COOKIE)) return;
+        User.createUser(context, loaded -> {
+            if (loaded != null) new LoadTags(context).start();
+        });
+    }
+
     public static User getUser() {
         return user;
     }
 
     public static void updateUser(User user) {
         Login.user = user;
+        // Every profile fetch funnels through here, whoever started it, so this is the one
+        // place that can reliably tell the UI the profile finally arrived.
+        for (UserListener listener : userListeners) listener.onUserChanged(user);
+    }
+
+    public static void addUserListener(@NonNull UserListener listener) {
+        userListeners.add(listener);
+    }
+
+    public static void removeUserListener(@NonNull UserListener listener) {
+        userListeners.remove(listener);
+    }
+
+    /**
+     * Notified whenever the cached user profile changes, including when it is cleared on logout.
+     * Called on whatever thread completed the fetch, so hop to the UI thread before touching views.
+     */
+    public interface UserListener {
+        void onUserChanged(@Nullable User user);
     }
 
     public static boolean isOnlineTags(Tag tag) {

@@ -139,13 +139,23 @@ public class WebtoonAdapter extends RecyclerView.Adapter<WebtoonAdapter.ViewHold
         GlideX.with(context).clear(holder.photoView);
     }
 
-    public void preloadPage(RecyclerView recyclerView, int position) {
+    /**
+     * Warms the cache for a page that is not on screen yet. This deliberately does not
+     * need a bound ViewHolder: neighbours of the current page usually have none, so a
+     * view-based preload would silently do nothing exactly when it is most useful.
+     * onBindViewHolder then hits the cache once the page scrolls in.
+     */
+    public void preloadPage(int position) {
         if (position < 0 || position >= getItemCount()) return;
-        RecyclerView.ViewHolder holder = recyclerView.findViewHolderForAdapterPosition(position);
         RequestBuilder<Drawable> request = loadPage(position);
-        if (holder instanceof ViewHolder && request != null) {
-            request.priority(Priority.HIGH).into(((ViewHolder) holder).photoView);
-        }
+        if (request == null) return;
+        // Must mirror the decode options in loadImage, or the cache key will not match.
+        // LOW keeps prefetching from outranking the page the user is actually looking at.
+        request.apply(new RequestOptions()
+                .override(Target.SIZE_ORIGINAL)
+                .fitCenter())
+            .priority(Priority.LOW)
+            .preload();
     }
 
     public void rotatePage(int position) {

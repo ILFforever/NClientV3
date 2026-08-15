@@ -37,8 +37,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 @SuppressLint("Range")
 public class Queries {
@@ -968,6 +970,59 @@ public class Queries {
         }
 
         public static void removeAllFavorite() {
+            db.delete(TABLE_NAME, null, null);
+        }
+    }
+
+    /**
+     * Snapshot of the favorite ids as of the last fully successful sync.
+     * <p>
+     * Comparing only the local and remote sets cannot tell "added over there" apart from
+     * "removed over here" - both look like "present on one side only". This baseline is the
+     * missing third state that makes the difference decidable, so a removal on either side
+     * can be propagated instead of being resurrected by the other side.
+     */
+    public static class FavoriteSyncBaselineTable {
+        public static final String TABLE_NAME = "FavoriteSyncBaseline";
+        /**
+         * @noinspection unused
+         */
+        public static final String DROP_TABLE = "DROP TABLE IF EXISTS " + TABLE_NAME;
+        static final String CREATE_TABLE = "CREATE TABLE IF NOT EXISTS `FavoriteSyncBaseline` (" +
+            "`id_gallery` INT NOT NULL PRIMARY KEY);";
+
+        static final String ID_GALLERY = "id_gallery";
+
+        public static Set<Integer> getBaselineIds() {
+            Set<Integer> ids = new HashSet<>();
+            try (Cursor c = db.query(TABLE_NAME, new String[]{ID_GALLERY},
+                null, null, null, null, null)) {
+                while (c.moveToNext()) ids.add(c.getInt(0));
+            }
+            return ids;
+        }
+
+        /**
+         * Replaces the snapshot atomically. Only call after a sync that fully succeeded: a
+         * baseline written from a partial run would describe a state neither side is in, and
+         * the next sync would read the gaps as deletions.
+         */
+        public static void replaceBaseline(Set<Integer> ids) {
+            db.beginTransaction();
+            try {
+                db.delete(TABLE_NAME, null, null);
+                ContentValues values = new ContentValues(1);
+                for (int id : ids) {
+                    values.put(ID_GALLERY, id);
+                    db.insertWithOnConflict(TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_IGNORE);
+                }
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+        }
+
+        public static void clearBaseline() {
             db.delete(TABLE_NAME, null, null);
         }
     }

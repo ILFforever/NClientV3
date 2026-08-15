@@ -178,8 +178,14 @@
     <string name="favorite_sync_login_required">Log in or add an API key to sync favorites.</string>
     <string name="favorite_sync_download_progress">Downloading favorites: %1$d / %2$d</string>
     <string name="favorite_sync_upload_progress">Uploading favorites: %1$d / %2$d</string>
-    <string name="favorite_sync_complete">Favorites synced: %1$d added from web, %2$d uploaded, %3$d failed.</string>
-    <string name="favorite_sync_partial">Favorites partially synced: %1$d added from web, %2$d uploaded, %3$d failed.</string>
+    <string name="favorite_sync_no_changes">Favorites already in sync</string>
+    <string name="favorite_sync_in_progress">Sync already running</string>
+    <string name="favorite_sync_result">Synced: %1$s</string>
+    <string name="favorite_sync_first_run">Merged: %1$s. Removals sync from now on.</string>
+    <string name="favorite_sync_added">%d added</string>
+    <string name="favorite_sync_uploaded">%d uploaded</string>
+    <string name="favorite_sync_removed">%d removed</string>
+    <string name="favorite_sync_failed_count">%d failed</string>
     <string name="favorite_sync_failed">Favorite sync failed. Try again.</string>
     <string name="favorite_update_failed">Could not update favorites. Nothing was changed.</string>
     <string name="setting_on_remove_ignored">The galleries with ignored tags will not be shown</string>
@@ -457,5 +463,16 @@
     <string name="auth_error">Authentication error</string>
     <string name="auth_title">Biometric login for NClient</string>
     <string name="auth_subtitle">Log in using your biometric credential</string>
+
+    <string name="user_profile">Profile</string>
+    <string name="joined_format">Joined: %1$s (%2$s)</string>
+    <string name="recent_favorites">Recent Favorites</string>
+    <string name="recent_comments">Recent Comments</string>
+    <string name="favorite_tags">Favorite Tags</string>
+    <string name="about_user">About</string>
+    <string name="staff">Staff</string>
+    <string name="no_recent_favorites">No recent favorites</string>
+    <string name="no_recent_comments">No recent comments</string>
+    <string name="unable_to_load_profile">Unable to load profile</string>
 
 </resources>

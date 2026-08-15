@@ -364,19 +364,20 @@ public class GalleryData implements Parcelable {
         String[] parts = path.split(";");
         if (parts[1].startsWith("http")) {
             changedInfo = true;
-            cover = new Page(ImageType.COVER, Uri.parse(parts[1]));
-            thumbnail = new Page(ImageType.THUMBNAIL, Uri.parse(parts[2]));
+            // Rows written by older versions hold absolute numbered-host URLs.
+            cover = new Page(ImageType.COVER, Uri.parse(Utility.normalizeImageHost(parts[1])));
+            thumbnail = new Page(ImageType.THUMBNAIL, Uri.parse(Utility.normalizeImageHost(parts[2])));
             int absolutePage = 0;
             for (int i = 3; i < parts.length; i++) {
-                pages.add(new Page(ImageType.PAGE, Uri.parse(parts[i]), null, absolutePage++));
+                pages.add(new Page(ImageType.PAGE, Uri.parse(Utility.normalizeImageHost(parts[i])), null, absolutePage++));
             }
             return;
         }
-        cover = new Page(ImageType.COVER, Uri.parse("https://t1." + Utility.getHost() + "/galleries/" + mediaId + parts[1]));
-        thumbnail = new Page(ImageType.THUMBNAIL, Uri.parse("https://t1." + Utility.getHost() + "/galleries/" + mediaId + parts[2]));
+        cover = new Page(ImageType.COVER, Uri.parse("https://" + Utility.getThumbHost() + "/galleries/" + mediaId + parts[1]));
+        thumbnail = new Page(ImageType.THUMBNAIL, Uri.parse("https://" + Utility.getThumbHost() + "/galleries/" + mediaId + parts[2]));
         int absolutePage = 0;
         for (int i = 3; i < parts.length; i++) {
-            pages.add(new Page(ImageType.PAGE, Uri.parse("https://i1." + Utility.getHost() + "/galleries/" + mediaId + parts[i]), null, absolutePage++));
+            pages.add(new Page(ImageType.PAGE, Uri.parse("https://" + Utility.getImageHost() + "/galleries/" + mediaId + parts[i]), null, absolutePage++));
         }
     }
 

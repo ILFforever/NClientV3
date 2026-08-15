@@ -63,11 +63,12 @@ public class Page implements Parcelable {
         while (reader.peek() != JsonToken.END_OBJECT) {
             switch (reader.nextName()) {
                 case "path":
-                    String prefix = imageType == ImageType.PAGE ? "i1" : "t1";
-                    path = Uri.parse("https://" + prefix + "." + Utility.getHost() + "/" + reader.nextString());
+                    String host = imageType == ImageType.PAGE
+                        ? Utility.getImageHost() : Utility.getThumbHost();
+                    path = Uri.parse("https://" + host + "/" + reader.nextString());
                     break;
                 case "thumbnail":
-                    thumbPath = Uri.parse("https://t1." + Utility.getHost() + "/" + reader.nextString());
+                    thumbPath = Uri.parse("https://" + Utility.getThumbHost() + "/" + reader.nextString());
                     break;
                 case "width":
                     size.setWidth(reader.nextInt());

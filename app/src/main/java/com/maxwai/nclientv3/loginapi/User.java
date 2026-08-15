@@ -78,7 +78,8 @@ public class User {
     }
 
     public String getAvatarUrl() {
-        return avatarUrl;
+        // Scraped straight from the page HTML, so it can carry an absolute numbered-host URL.
+        return Utility.normalizeImageHost(avatarUrl);
     }
 
     public interface CreateUser {

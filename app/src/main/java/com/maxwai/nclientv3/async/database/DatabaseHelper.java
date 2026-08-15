@@ -25,7 +25,7 @@ import java.util.List;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
     static final String DATABASE_NAME = "Entries.db";
-    private static final int DATABASE_VERSION = 14;
+    private static final int DATABASE_VERSION = 15;
     private final Context context;
 
     public DatabaseHelper(Context context1) {
@@ -54,6 +54,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL(Queries.ResumeTable.CREATE_TABLE);
         db.execSQL(Queries.StatusTable.CREATE_TABLE);
         db.execSQL(Queries.StatusMangaTable.CREATE_TABLE);
+        db.execSQL(Queries.FavoriteSyncBaselineTable.CREATE_TABLE);
 
     }
     // TODO: 28/10/20 Add search history to DB instead of shared
@@ -93,6 +94,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         if (oldVersion <= 10) db.execSQL(Queries.ResumeTable.CREATE_TABLE);
         if (oldVersion <= 11) updateFavoriteTable(db);
         if (oldVersion <= 12) addStatusTables(db);
+        // Left empty: existing users have no baseline, so their next sync unions as before
+        // and records the baseline that later syncs merge against.
+        if (oldVersion <= 14) db.execSQL(Queries.FavoriteSyncBaselineTable.CREATE_TABLE);
 
     }
 
