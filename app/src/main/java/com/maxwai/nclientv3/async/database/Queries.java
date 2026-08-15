@@ -39,8 +39,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.HashSet;
-import java.util.Set;
 
 @SuppressLint("Range")
 public class Queries {
@@ -97,6 +95,7 @@ public class Queries {
         public static final String MAX_HEIGHT = "maxH";
         public static final String MIN_WIDTH = "minW";
         public static final String MIN_HEIGHT = "minH";
+        public static final String FAVORITE_SUMMARY_PREFIX = "favorite-summary:";
         static final String CREATE_TABLE = "CREATE TABLE IF NOT EXISTS `Gallery` ( " +
             "`idGallery`      INT               NOT NULL PRIMARY KEY , " +
             "`title_eng`      TINYTEXT          NOT NULL, " +
@@ -219,14 +218,22 @@ public class Queries {
             values.put(TITLE_PRETTY, englishTitle.isEmpty() ? japaneseTitle : englishTitle);
             values.put(FAVORITE_COUNT, item.optInt("num_favorites", 0));
             values.put(MEDIAID, item.optInt("media_id", 0));
-            // Old-format marker: the visible-page refresh queue replaces this with full v2 detail.
-            values.put(PAGES, pageCount + ";webp;webp;" + pageCount + ";webp;");
+            // Keep the same compact list item used by Home. Full detail replaces it on first open.
+            values.put(PAGES, FAVORITE_SUMMARY_PREFIX + item);
             values.put(UPLOAD, 0);
             values.put(MAX_WIDTH, item.optInt("thumbnail_width", 0));
             values.put(MAX_HEIGHT, item.optInt("thumbnail_height", 0));
             values.put(MIN_WIDTH, item.optInt("thumbnail_width", 0));
             values.put(MIN_HEIGHT, item.optInt("thumbnail_height", 0));
-            db.insertWithOnConflict(TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_IGNORE);
+            long inserted = db.insertWithOnConflict(
+                TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_IGNORE);
+            if (inserted == -1) {
+                // Refresh summaries and migrate prior partial markers, but preserve full cached rows.
+                db.update(TABLE_NAME, values,
+                    IDGALLERY + "=? AND (" + PAGES + " NOT LIKE ? OR " + PAGES + " LIKE ?)",
+                    new String[]{Integer.toString(item.getInt("id")), "%/%",
+                        FAVORITE_SUMMARY_PREFIX + "%"});
+            }
         }
 
         /**
@@ -843,9 +850,14 @@ public class Queries {
             FavoriteTable.insert(gallery.getId());
         }
 
-        public static void addFavoriteListItem(JSONObject item) throws JSONException {
+        public static void addFavoriteListItem(JSONObject item, long sortTime) throws JSONException {
             GalleryTable.insertFavoriteListItem(item);
-            FavoriteTable.insert(item.getInt("id"));
+            int galleryId = item.getInt("id");
+            FavoriteTable.insert(galleryId);
+            ContentValues values = new ContentValues(1);
+            values.put(TIME, sortTime);
+            db.update(TABLE_NAME, values, ID_GALLERY + "=?",
+                new String[]{Integer.toString(galleryId)});
         }
 
 
@@ -932,10 +944,10 @@ public class Queries {
             }
         }
 
-        public static Set<Integer> getAllFavoriteIds() {
-            Set<Integer> ids = new HashSet<>();
+        public static List<Integer> getFavoriteIdsOldestFirst() {
+            List<Integer> ids = new ArrayList<>();
             try (Cursor c = db.query(TABLE_NAME, new String[]{ID_GALLERY},
-                null, null, null, null, null)) {
+                null, null, null, null, TIME + " ASC")) {
                 while (c.moveToNext()) ids.add(c.getInt(0));
             }
             return ids;

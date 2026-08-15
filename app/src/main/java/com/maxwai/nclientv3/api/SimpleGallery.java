@@ -44,6 +44,7 @@ public class SimpleGallery extends GenericGallery {
     private final String title;
     private final Uri thumbnail;
     private final int id, mediaId;
+    private int pageCount;
     private Language language = Language.UNKNOWN;
     private TagList tags;
 
@@ -61,12 +62,15 @@ public class SimpleGallery extends GenericGallery {
         id = c.getInt(c.getColumnIndex(Queries.HistoryTable.ID));
         mediaId = c.getInt(c.getColumnIndex(Queries.HistoryTable.MEDIAID));
         thumbnail = Uri.parse(c.getString(c.getColumnIndex(Queries.HistoryTable.THUMB)));
+        pageCount = 0;
     }
 
-    private SimpleGallery(String title, int id, int mediaId, Uri thumbnail, Language language, TagList tags) {
+    private SimpleGallery(String title, int id, int mediaId, int pageCount, Uri thumbnail,
+                          Language language, TagList tags) {
         this.title = title;
         this.id = id;
         this.mediaId = mediaId;
+        this.pageCount = pageCount;
         this.thumbnail = thumbnail;
         this.language = language;
         this.tags = tags;
@@ -76,6 +80,7 @@ public class SimpleGallery extends GenericGallery {
         title = gallery.getTitle();
         mediaId = gallery.getMediaId();
         id = gallery.getId();
+        pageCount = gallery.getPageCount();
         thumbnail = gallery.getThumbnail();
     }
 
@@ -144,7 +149,49 @@ public class SimpleGallery extends GenericGallery {
             }
         }
         if (context != null && id > Global.getMaxId()) Global.updateMaxId(context, id);
-        return new SimpleGallery(title, id, mediaId, Uri.parse("https://t1." + Utility.getHost() + "/" + thumbPath), language, tags);
+        Uri thumbnail = Uri.parse(thumbPath.startsWith("http://") || thumbPath.startsWith("https://")
+            ? thumbPath : "https://" + Utility.getThumbHost() + "/" + thumbPath);
+        return new SimpleGallery(title, id, mediaId, json.optInt("num_pages", 0),
+            thumbnail, language, tags);
+    }
+
+    /** Builds a display-only favorite from the pre-v2 compact page marker without networking. */
+    @SuppressLint("Range")
+    public static SimpleGallery fromLegacyFavoriteCursor(Cursor cursor) {
+        int id = cursor.getInt(cursor.getColumnIndex(Queries.GalleryTable.IDGALLERY));
+        int mediaId = cursor.getInt(cursor.getColumnIndex(Queries.GalleryTable.MEDIAID));
+        String titleColumn;
+        switch (Global.getTitleType()) {
+            case JAPANESE:
+                titleColumn = Queries.GalleryTable.TITLE_JP;
+                break;
+            case PRETTY:
+                titleColumn = Queries.GalleryTable.TITLE_PRETTY;
+                break;
+            default:
+                titleColumn = Queries.GalleryTable.TITLE_ENG;
+                break;
+        }
+        String title = cursor.getString(cursor.getColumnIndex(titleColumn));
+        if (title == null || title.isEmpty())
+            title = cursor.getString(cursor.getColumnIndex(Queries.GalleryTable.TITLE_ENG));
+
+        String marker = cursor.getString(cursor.getColumnIndex(Queries.GalleryTable.PAGES));
+        String[] parts = marker == null ? new String[0] : marker.split(";");
+        int pageCount = 0;
+        if (parts.length > 0) {
+            try {
+                pageCount = Integer.parseInt(parts[0]);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        String extension = parts.length > 2 && !parts[2].isEmpty() ? parts[2] : "webp";
+        if (extension.startsWith(".")) extension = extension.substring(1);
+        Uri thumbnail = Uri.parse("https://" + Utility.getThumbHost() + "/galleries/"
+            + mediaId + "/thumb." + extension);
+        TagList tags = Queries.GalleryBridgeTable.getTagsForGallery(id);
+        return new SimpleGallery(title == null ? "" : title, id, mediaId, pageCount,
+            thumbnail, Gallery.loadLanguage(tags), tags);
     }
 
     public boolean hasTags(Collection<Tag> tags) {
@@ -177,7 +224,7 @@ public class SimpleGallery extends GenericGallery {
 
     @Override
     public int getPageCount() {
-        return 0;
+        return pageCount;
     }
 
     @Override

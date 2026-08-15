@@ -113,7 +113,10 @@ public class RandomFavoriteActivity extends GeneralActivity {
                     // Check for old-format pages before constructing Gallery to avoid readPagePath's implicit thread
                     int pagesIndex = c.getColumnIndex(Queries.GalleryTable.PAGES);
                     String pagesStr = pagesIndex >= 0 ? c.getString(pagesIndex) : null;
-                    boolean isOldFormat = pagesStr != null && pagesStr.contains(";") && !pagesStr.contains("/");
+                    boolean isSummary = pagesStr != null
+                        && pagesStr.startsWith(Queries.GalleryTable.FAVORITE_SUMMARY_PREFIX);
+                    boolean isOldFormat = pagesStr != null && pagesStr.contains(";")
+                        && !pagesStr.contains("/");
                     int idIndex = c.getColumnIndex(Queries.GalleryTable.IDGALLERY);
                     if (idIndex < 0) {
                         LogUtility.w("Gallery ID column not found in cursor");
@@ -122,7 +125,7 @@ public class RandomFavoriteActivity extends GeneralActivity {
                     }
                     int galleryId = c.getInt(idIndex);
 
-                    if (isOldFormat) {
+                    if (isSummary || isOldFormat) {
                         GalleryData.queuedForRefresh.add(galleryId);
                         try {
                             String url = Utility.getBaseUrl() + "api/v2/galleries/" + galleryId;
@@ -132,11 +135,12 @@ public class RandomFavoriteActivity extends GeneralActivity {
                                 String body = respBody != null ? respBody.string() : "";
                                 if (resp.code() == HttpURLConnection.HTTP_OK) {
                                     Gallery gallery = new Gallery(this, body, null, false);
-                                    Queries.GalleryTable.insert(gallery);
+                                    Queries.FavoriteTable.addFavorite(gallery);
                                     runOnUiThread(() -> loadGallery(gallery));
                                     return;
                                 } else {
-                                    LogUtility.w("Random: old-format fetch failed for " + galleryId + " (HTTP " + resp.code() + "), using cached data");
+                                    LogUtility.w("Random: favorite detail fetch failed for "
+                                        + galleryId + " (HTTP " + resp.code() + ")");
                                 }
                             }
                         } catch (Exception e) {
@@ -144,6 +148,7 @@ public class RandomFavoriteActivity extends GeneralActivity {
                         } finally {
                             GalleryData.queuedForRefresh.remove(galleryId);
                         }
+                        return;
                     }
 
                     Gallery g = Queries.GalleryTable.cursorToGallery(RandomFavoriteActivity.this, c);

@@ -54,7 +54,9 @@ public final class FavoriteSyncManager {
 
     private static void runSync(Context context, Listener listener) {
         try {
-            Set<Integer> localIds = Queries.FavoriteTable.getAllFavoriteIds();
+            List<Integer> localIdsOldestFirst =
+                Queries.FavoriteTable.getFavoriteIdsOldestFirst();
+            Set<Integer> localIds = new HashSet<>(localIdsOldestFirst);
             Set<Integer> remoteIds = new HashSet<>();
             List<JSONObject> remoteItems = new ArrayList<>();
 
@@ -80,14 +82,20 @@ public final class FavoriteSyncManager {
             } while (page <= pageCount);
 
             int downloaded = 0;
-            for (JSONObject item : remoteItems) {
+            long newestRemoteTime = System.currentTimeMillis();
+            for (int remotePosition = 0; remotePosition < remoteItems.size(); remotePosition++) {
+                JSONObject item = remoteItems.get(remotePosition);
                 int id = item.getInt("id");
-                Queries.FavoriteTable.addFavoriteListItem(item);
+                // The API is newest-first; decreasing timestamps preserve that order in SQLite.
+                Queries.FavoriteTable.addFavoriteListItem(
+                    item, newestRemoteTime - remotePosition);
                 if (!localIds.contains(id)) downloaded++;
             }
 
-            Set<Integer> localOnly = new HashSet<>(localIds);
-            localOnly.removeAll(remoteIds);
+            List<Integer> localOnly = new ArrayList<>();
+            for (int id : localIdsOldestFirst) {
+                if (!remoteIds.contains(id)) localOnly.add(id);
+            }
             int uploaded = 0;
             int failed = 0;
             int completed = 0;
