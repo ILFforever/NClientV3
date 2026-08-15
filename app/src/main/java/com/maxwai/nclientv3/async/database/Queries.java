@@ -953,6 +953,13 @@ public class Queries {
             return ids;
         }
 
+        public static void updateFavoriteTime(int id, long time) {
+            ContentValues values = new ContentValues(1);
+            values.put(TIME, time);
+            db.update(TABLE_NAME, values, ID_GALLERY + "=?",
+                new String[]{Integer.toString(id)});
+        }
+
         public static boolean isFavorite(int id) {
             String query = "SELECT * FROM " + TABLE_NAME + " WHERE " + ID_GALLERY + "=?";
             try (Cursor c = db.rawQuery(query, new String[]{"" + id})) {

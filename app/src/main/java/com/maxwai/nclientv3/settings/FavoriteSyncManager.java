@@ -99,6 +99,7 @@ public final class FavoriteSyncManager {
             int uploaded = 0;
             int failed = 0;
             int completed = 0;
+            long latestUploadedTime = System.currentTimeMillis();
             for (int id : localOnly) {
                 String url = String.format(Locale.US, Utility.getApiBaseUrl()
                     + "galleries/%d/favorite", id);
@@ -108,6 +109,9 @@ public final class FavoriteSyncManager {
                     if (response.isSuccessful() && response.body() != null
                         && new JSONObject(response.body().string()).optBoolean("favorited", false)) {
                         uploaded++;
+                        latestUploadedTime = Math.max(System.currentTimeMillis(),
+                            latestUploadedTime + 1);
+                        Queries.FavoriteTable.updateFavoriteTime(id, latestUploadedTime);
                     } else {
                         failed++;
                     }
