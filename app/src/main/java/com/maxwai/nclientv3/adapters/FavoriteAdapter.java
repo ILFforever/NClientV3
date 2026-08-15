@@ -13,6 +13,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.maxwai.nclientv3.FavoriteActivity;
@@ -48,6 +49,16 @@ public class FavoriteAdapter extends RecyclerView.Adapter<GenericAdapter.ViewHol
     private Cursor cursor;
     private boolean force = false;
     private boolean sortByTitle = false;
+
+    private static final class RowSnapshot {
+        final long id;
+        final String content;
+
+        RowSnapshot(long id, String content) {
+            this.id = id;
+            this.content = content;
+        }
+    }
 
     public FavoriteAdapter(FavoriteActivity activity) {
         this.activity = activity;
@@ -233,12 +244,33 @@ public class FavoriteAdapter extends RecyclerView.Adapter<GenericAdapter.ViewHol
             protected void publishResults(CharSequence constraint, FilterResults results) {
                 if (results == null) return;
                 setRefresh(true);
-                final int oldSize = getItemCount(), newSize = results.count;
-                updateCursor((Cursor) results.values);
-                //not in runOnUIThread because is always executed on UI
-                if (oldSize > newSize) notifyItemRangeRemoved(newSize, oldSize - newSize);
-                else notifyItemRangeInserted(oldSize, newSize - oldSize);
-                notifyItemRangeChanged(0, Math.min(newSize, oldSize));
+                Cursor newCursor = (Cursor) results.values;
+                List<RowSnapshot> oldRows = snapshotRows(cursor);
+                List<RowSnapshot> newRows = snapshotRows(newCursor);
+                DiffUtil.DiffResult diff = DiffUtil.calculateDiff(new DiffUtil.Callback() {
+                    @Override
+                    public int getOldListSize() {
+                        return oldRows.size();
+                    }
+
+                    @Override
+                    public int getNewListSize() {
+                        return newRows.size();
+                    }
+
+                    @Override
+                    public boolean areItemsTheSame(int oldItemPosition, int newItemPosition) {
+                        return oldRows.get(oldItemPosition).id == newRows.get(newItemPosition).id;
+                    }
+
+                    @Override
+                    public boolean areContentsTheSame(int oldItemPosition, int newItemPosition) {
+                        return oldRows.get(oldItemPosition).content.equals(
+                            newRows.get(newItemPosition).content);
+                    }
+                });
+                updateCursor(newCursor);
+                diff.dispatchUpdatesTo(FavoriteAdapter.this);
 
                 setRefresh(false);
             }
@@ -264,6 +296,29 @@ public class FavoriteAdapter extends RecyclerView.Adapter<GenericAdapter.ViewHol
         galleries = new GenericGallery[c == null ? 0 : c.getCount()];
         cursor = c;
         statuses.clear();
+    }
+
+    private static List<RowSnapshot> snapshotRows(@Nullable Cursor source) {
+        if (source == null) return Collections.emptyList();
+        int originalPosition = source.getPosition();
+        int idColumn = source.getColumnIndex(Queries.GalleryTable.IDGALLERY);
+        int columnCount = source.getColumnCount();
+        List<RowSnapshot> rows = new ArrayList<>(source.getCount());
+        source.moveToPosition(-1);
+        while (source.moveToNext()) {
+            StringBuilder content = new StringBuilder();
+            for (int column = 0; column < columnCount; column++) {
+                int type = source.getType(column);
+                content.append(type).append(':');
+                if (type == Cursor.FIELD_TYPE_INTEGER) content.append(source.getLong(column));
+                else if (type == Cursor.FIELD_TYPE_FLOAT) content.append(source.getDouble(column));
+                else if (type == Cursor.FIELD_TYPE_STRING) content.append(source.getString(column));
+                content.append('\u0000');
+            }
+            rows.add(new RowSnapshot(source.getLong(idColumn), content.toString()));
+        }
+        source.moveToPosition(originalPosition);
+        return rows;
     }
 
     public Collection<Gallery> getAllGalleries() {
