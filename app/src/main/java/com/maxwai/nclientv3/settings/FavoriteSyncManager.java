@@ -1,10 +1,17 @@
 package com.maxwai.nclientv3.settings;
 
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.StringRes;
+import androidx.core.app.NotificationCompat;
 
+import com.maxwai.nclientv3.FavoriteActivity;
+import com.maxwai.nclientv3.R;
 import com.maxwai.nclientv3.async.database.Queries;
 import com.maxwai.nclientv3.utility.LogUtility;
 import com.maxwai.nclientv3.utility.Utility;
@@ -64,6 +71,7 @@ public final class FavoriteSyncManager {
     private static final int READ_BURST_PAGES = 14;
     private static final int MAX_ATTEMPTS = 4;
     private static final AtomicBoolean RUNNING = new AtomicBoolean(false);
+    private static volatile Progress progress = new Progress(false, 0, 0);
 
     private FavoriteSyncManager() {
     }
@@ -78,10 +86,39 @@ public final class FavoriteSyncManager {
      */
     public static boolean sync(@NonNull Context context, @NonNull Listener listener) {
         if (!RUNNING.compareAndSet(false, true)) return false;
-        Context applicationContext = context.getApplicationContext();
+        progress = new Progress(false, 0, 0);
+        Context app = context.getApplicationContext();
         new Thread(() -> {
+            int notificationId = NotificationSettings.getNotificationId();
+            NotificationCompat.Builder notification = buildNotification(app);
+            // Show it before the first request, so a slow account fetch is not dead air.
+            NotificationSettings.notify(app, notificationId, notification.build());
             try {
-                runSync(applicationContext, listener);
+                // Mirror every callback into the notification, so progress stays visible after
+                // the user leaves the Favorites screen.
+                runSync(app, new Listener() {
+                    @Override
+                    public void onProgress(boolean writing, int completed, int total) {
+                        progress = new Progress(writing, completed, total);
+                        publishProgress(app, notification, notificationId, writing, completed, total);
+                        listener.onProgress(writing, completed, total);
+                    }
+
+                    @Override
+                    public void onComplete(@NonNull Result result) {
+                        publishResult(app, notification, notificationId,
+                            R.string.favorite_sync_done, describe(app, result));
+                        listener.onComplete(result);
+                    }
+
+                    @Override
+                    public void onFailure() {
+                        publishResult(app, notification, notificationId,
+                            R.string.favorite_sync_failed_title,
+                            app.getString(R.string.favorite_sync_failed));
+                        listener.onFailure();
+                    }
+                });
             } finally {
                 RUNNING.set(false);
             }
@@ -91,6 +128,96 @@ public final class FavoriteSyncManager {
 
     public static boolean isRunning() {
         return RUNNING.get();
+    }
+
+    /**
+     * Latest progress of the running sync. Kept as a snapshot rather than pushed to listeners so
+     * a screen opened midway through - after the one that started the sync is long gone - can
+     * still say what is happening instead of showing nothing.
+     */
+    public static Progress getProgress() {
+        return progress;
+    }
+
+    /**
+     * Human-readable description of the current phase, for a UI that joined late.
+     */
+    public static String describeProgress(@NonNull Context context) {
+        Progress current = progress;
+        return phaseText(context, current.writing, current.completed, current.total);
+    }
+
+    /**
+     * The one place phase wording is decided, so the notification, the dialog and the toolbar
+     * subtitle cannot describe the same moment differently. Reading pages the account's favorites
+     * list; writing pushes both additions and removals, hence "saving changes" rather than
+     * "uploading".
+     */
+    public static String phaseText(@NonNull Context context, boolean writing, int completed, int total) {
+        if (total > 0) {
+            return context.getString(writing
+                    ? R.string.favorite_sync_writing_count : R.string.favorite_sync_reading_page,
+                completed, total);
+        }
+        return context.getString(writing
+            ? R.string.favorite_sync_writing : R.string.favorite_sync_reading);
+    }
+
+    /**
+     * Renders a result as a short sentence, listing only the counts that are non-zero so a quiet
+     * sync reads as three words instead of a row of zeroes. Shared by the toast and the
+     * notification so the two can never drift.
+     */
+    public static String describe(@NonNull Context context, @NonNull Result result) {
+        List<String> parts = new ArrayList<>();
+        if (result.downloaded > 0)
+            parts.add(context.getString(R.string.favorite_sync_added, result.downloaded));
+        if (result.uploaded > 0)
+            parts.add(context.getString(R.string.favorite_sync_uploaded, result.uploaded));
+        int removed = result.removedLocal + result.removedRemote;
+        if (removed > 0) parts.add(context.getString(R.string.favorite_sync_removed, removed));
+        if (result.failed > 0)
+            parts.add(context.getString(R.string.favorite_sync_failed_count, result.failed));
+
+        if (parts.isEmpty()) return context.getString(R.string.favorite_sync_no_changes);
+        String summary = TextUtils.join(", ", parts);
+        return context.getString(result.firstSync
+            ? R.string.favorite_sync_first_run : R.string.favorite_sync_result, summary);
+    }
+
+    private static NotificationCompat.Builder buildNotification(Context context) {
+        Intent intent = new Intent(context, FavoriteActivity.class)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        return new NotificationCompat.Builder(context, Global.CHANNEL_ID4)
+            .setSmallIcon(R.drawable.ic_favorite)
+            .setContentTitle(context.getString(R.string.favorite_sync_notification_title))
+            .setContentText(context.getString(R.string.favorite_sync_reading))
+            .setContentIntent(PendingIntent.getActivity(context, 0, intent,
+                PendingIntent.FLAG_IMMUTABLE))
+            .setOnlyAlertOnce(true)
+            .setOngoing(true)
+            .setProgress(0, 0, true);
+    }
+
+    private static void publishProgress(Context context, NotificationCompat.Builder notification,
+                                        int notificationId, boolean writing, int completed, int total) {
+        notification.setContentText(phaseText(context, writing, completed, total))
+            .setProgress(Math.max(total, 1), completed, total <= 0);
+        NotificationSettings.notify(context, notificationId, notification.build());
+    }
+
+    /**
+     * @param title must reflect the outcome; a failed sync titled "complete" contradicts its own body
+     */
+    private static void publishResult(Context context, NotificationCompat.Builder notification,
+                                      int notificationId, @StringRes int title, String summary) {
+        notification.setContentTitle(context.getString(title))
+            .setContentText(summary)
+            .setStyle(new NotificationCompat.BigTextStyle().bigText(summary))
+            .setProgress(0, 0, false)
+            .setOngoing(false)
+            .setAutoCancel(true);
+        NotificationSettings.notify(context, notificationId, notification.build());
     }
 
     private static void runSync(Context context, Listener listener) {
@@ -122,30 +249,36 @@ public final class FavoriteSyncManager {
                 else toUpload.add(id);
             }
 
-            // Refresh stored metadata for everything the server still knows about, and give
-            // downloads descending timestamps so SQLite reproduces the API's newest-first order.
+            // Refresh stored metadata for everything the server still knows about. Only entries
+            // that are new to this device get a sort time: they are ordered by remote position so
+            // SQLite reproduces the API's newest-first order. Galleries the user already had keep
+            // the time they were originally favorited, otherwise every sync would rewrite the
+            // whole list into whatever order the server happens to report.
             Set<Integer> deletingRemote = new HashSet<>(toDeleteRemote);
             int position = 0;
             long newestRemoteTime = System.currentTimeMillis();
             for (Map.Entry<Integer, JSONObject> entry : remoteItems.entrySet()) {
                 if (deletingRemote.contains(entry.getKey())) continue;
-                Queries.FavoriteTable.addFavoriteListItem(entry.getValue(), newestRemoteTime - position);
-                position++;
+                if (localIds.contains(entry.getKey())) {
+                    Queries.FavoriteTable.refreshFavoriteListItem(entry.getValue());
+                } else {
+                    Queries.FavoriteTable.addFavoriteListItem(entry.getValue(), newestRemoteTime - position);
+                    position++;
+                }
             }
 
             int failed = 0;
             int completed = 0;
             int totalWrites = toUpload.size() + toDeleteRemote.size();
 
-            long latestUploadedTime = System.currentTimeMillis();
             for (int id : toUpload) {
                 WriteOutcome outcome = write(context, id, true);
                 if (outcome == WriteOutcome.DISABLED)
                     throw new IOException("Favorites are disabled server-side");
-                if (outcome == WriteOutcome.OK) {
-                    latestUploadedTime = Math.max(System.currentTimeMillis(), latestUploadedTime + 1);
-                    Queries.FavoriteTable.updateFavoriteTime(id, latestUploadedTime);
-                } else if (outcome == WriteOutcome.GONE) {
+                // Deliberately does not touch the sort time. Pushing an existing local favorite
+                // to the account is reconciliation, not re-favoriting it, so it should stay where
+                // the user left it - otherwise the list visibly reshuffles one row per request.
+                if (outcome == WriteOutcome.GONE) {
                     // The gallery no longer exists upstream; drop it rather than retry forever.
                     Queries.FavoriteTable.removeFavorite(id);
                     localIds.remove(id);
@@ -298,6 +431,24 @@ public final class FavoriteSyncManager {
     }
 
     private enum WriteOutcome {OK, FAILED, GONE, DISABLED}
+
+    public static final class Progress {
+        /**
+         * False while reading the account, true once favorites are being added or removed.
+         */
+        public final boolean writing;
+        public final int completed;
+        /**
+         * Zero when the total is not known yet, which the UI should show as indeterminate.
+         */
+        public final int total;
+
+        Progress(boolean writing, int completed, int total) {
+            this.writing = writing;
+            this.completed = completed;
+            this.total = total;
+        }
+    }
 
     public interface Listener {
         void onProgress(boolean uploading, int completed, int total);

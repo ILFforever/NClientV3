@@ -51,7 +51,7 @@ import me.zhanghai.android.fastscroll.FastScrollerBuilder;
 import okhttp3.OkHttpClient;
 
 public class Global {
-    public static final String CHANNEL_ID1 = "download_gallery", CHANNEL_ID2 = "create_pdf", CHANNEL_ID3 = "create_zip";
+    public static final String CHANNEL_ID1 = "download_gallery", CHANNEL_ID2 = "create_pdf", CHANNEL_ID3 = "create_zip", CHANNEL_ID4 = "favorite_sync";
     private static final String MAINFOLDER_NAME = "NClientV3";
     private static final String DOWNLOADFOLDER_NAME = "Download";
     private static final String SCREENFOLDER_NAME = "Screen";
@@ -533,14 +533,18 @@ public class Global {
         NotificationChannel channel1 = new NotificationChannel(CHANNEL_ID1, context.getString(R.string.channel1_name), NotificationManager.IMPORTANCE_DEFAULT);
         NotificationChannel channel2 = new NotificationChannel(CHANNEL_ID2, context.getString(R.string.channel2_name), NotificationManager.IMPORTANCE_DEFAULT);
         NotificationChannel channel3 = new NotificationChannel(CHANNEL_ID3, context.getString(R.string.channel3_name), NotificationManager.IMPORTANCE_DEFAULT);
+        // Low importance: a sync runs for minutes, so it should stay silent in the shade.
+        NotificationChannel channel4 = new NotificationChannel(CHANNEL_ID4, context.getString(R.string.channel4_name), NotificationManager.IMPORTANCE_LOW);
         channel1.setDescription(context.getString(R.string.channel1_description));
         channel2.setDescription(context.getString(R.string.channel2_description));
         channel3.setDescription(context.getString(R.string.channel3_description));
+        channel4.setDescription(context.getString(R.string.channel4_description));
         NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
         if (notificationManager != null) {
             notificationManager.createNotificationChannel(channel1);
             notificationManager.createNotificationChannel(channel2);
             notificationManager.createNotificationChannel(channel3);
+            notificationManager.createNotificationChannel(channel4);
         }
     }
 

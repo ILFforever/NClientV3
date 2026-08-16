@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="favorite_sync">Sincronizza i preferiti</string>
+    <string name="favorite_sync_login_required">Accedi o aggiungi una chiave API per sincronizzare i preferiti.</string>
+
+    <string name="favorite_sync_notification_title">Sincronizzazione dei preferiti</string>
+    <string name="favorite_sync_reading">Lettura della lista dei preferiti…</string>
+    <string name="favorite_sync_reading_page">Lettura della lista dei preferiti — pagina %1$d di %2$d</string>
+    <string name="favorite_sync_writing">Salvataggio delle modifiche sul tuo account…</string>
+    <string name="favorite_sync_writing_count">Salvataggio delle modifiche sul tuo account — %1$d di %2$d</string>
+    <string name="favorite_sync_keep_open">L\'operazione continua in background. Puoi lasciare questa schermata.</string>
+    <string name="favorite_sync_finished">Sincronizzazione terminata</string>
+
+    <string name="favorite_sync_done">Sincronizzazione dei preferiti completata</string>
+    <string name="favorite_sync_failed_title">Sincronizzazione dei preferiti non riuscita</string>
+    <string name="favorite_sync_failed">Sincronizzazione dei preferiti non riuscita. Riprova.</string>
+    <string name="favorite_sync_no_changes">I preferiti sono già sincronizzati</string>
+    <string name="favorite_sync_result">Sincronizzato: %1$s</string>
+    <string name="favorite_sync_first_run">Uniti: %1$s. Da ora in poi verranno sincronizzate anche le rimozioni.</string>
+    <string name="favorite_sync_added">%d aggiunti</string>
+    <string name="favorite_sync_uploaded">%d caricati</string>
+    <string name="favorite_sync_removed">%d rimossi</string>
+    <string name="favorite_sync_failed_count">%d non riusciti</string>
+
+    <string name="channel4_name">Sincronizzazione dei preferiti</string>
+    <string name="channel4_description">Usato per mostrare l\'avanzamento della sincronizzazione dei preferiti</string>
+</resources>

@@ -852,6 +852,16 @@ public class Queries {
             FavoriteTable.insert(gallery.getId());
         }
 
+        /**
+         * Refreshes a favorite's cached metadata without touching its sort time, so a gallery the
+         * user already had keeps its place in the list. Only genuinely new entries should be
+         * positioned by {@link #addFavoriteListItem(JSONObject, long)}.
+         */
+        public static void refreshFavoriteListItem(JSONObject item) throws JSONException {
+            GalleryTable.insertFavoriteListItem(item);
+            FavoriteTable.insert(item.getInt("id"));
+        }
+
         public static void addFavoriteListItem(JSONObject item, long sortTime) throws JSONException {
             GalleryTable.insertFavoriteListItem(item);
             int galleryId = item.getInt("id");

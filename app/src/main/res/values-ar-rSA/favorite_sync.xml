@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="favorite_sync">مزامنة المفضلة</string>
+    <string name="favorite_sync_login_required">سجّل الدخول أو أضف مفتاح API لمزامنة المفضلة.</string>
+
+    <string name="favorite_sync_notification_title">جارٍ مزامنة المفضلة</string>
+    <string name="favorite_sync_reading">جارٍ قراءة قائمة المفضلة…</string>
+    <string name="favorite_sync_reading_page">جارٍ قراءة قائمة المفضلة — صفحة %1$d من %2$d</string>
+    <string name="favorite_sync_writing">جارٍ حفظ التغييرات في حسابك…</string>
+    <string name="favorite_sync_writing_count">جارٍ حفظ التغييرات في حسابك — %1$d من %2$d</string>
+    <string name="favorite_sync_keep_open">تعمل هذه العملية في الخلفية. يمكنك مغادرة هذه الشاشة.</string>
+    <string name="favorite_sync_finished">انتهت المزامنة</string>
+
+    <string name="favorite_sync_done">اكتملت مزامنة المفضلة</string>
+    <string name="favorite_sync_failed_title">فشلت مزامنة المفضلة</string>
+    <string name="favorite_sync_failed">فشلت مزامنة المفضلة. حاول مرة أخرى.</string>
+    <string name="favorite_sync_no_changes">المفضلة متزامنة بالفعل</string>
+    <string name="favorite_sync_result">تمت المزامنة: %1$s</string>
+    <string name="favorite_sync_first_run">تم الدمج: %1$s. ستتم مزامنة عمليات الحذف من الآن فصاعدًا.</string>
+    <string name="favorite_sync_added">%d مضاف</string>
+    <string name="favorite_sync_uploaded">%d مرفوع</string>
+    <string name="favorite_sync_removed">%d محذوف</string>
+    <string name="favorite_sync_failed_count">%d فاشل</string>
+
+    <string name="channel4_name">مزامنة المفضلة</string>
+    <string name="channel4_description">يُستخدم لعرض تقدم مزامنة المفضلة</string>
+</resources>

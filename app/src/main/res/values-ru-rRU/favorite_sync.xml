@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="favorite_sync">Синхронизировать избранное</string>
+    <string name="favorite_sync_login_required">Войдите или добавьте API-ключ, чтобы синхронизировать избранное.</string>
+
+    <string name="favorite_sync_notification_title">Синхронизация избранного</string>
+    <string name="favorite_sync_reading">Чтение списка избранного…</string>
+    <string name="favorite_sync_reading_page">Чтение списка избранного — страница %1$d из %2$d</string>
+    <string name="favorite_sync_writing">Сохранение изменений в вашем аккаунте…</string>
+    <string name="favorite_sync_writing_count">Сохранение изменений в вашем аккаунте — %1$d из %2$d</string>
+    <string name="favorite_sync_keep_open">Это выполняется в фоне. Вы можете покинуть этот экран.</string>
+    <string name="favorite_sync_finished">Синхронизация завершена</string>
+
+    <string name="favorite_sync_done">Синхронизация избранного завершена</string>
+    <string name="favorite_sync_failed_title">Не удалось синхронизировать избранное</string>
+    <string name="favorite_sync_failed">Не удалось синхронизировать избранное. Попробуйте ещё раз.</string>
+    <string name="favorite_sync_no_changes">Избранное уже синхронизировано</string>
+    <string name="favorite_sync_result">Синхронизировано: %1$s</string>
+    <string name="favorite_sync_first_run">Объединено: %1$s. Удаления будут синхронизироваться с этого момента.</string>
+    <string name="favorite_sync_added">%d добавлено</string>
+    <string name="favorite_sync_uploaded">%d выгружено</string>
+    <string name="favorite_sync_removed">%d удалено</string>
+    <string name="favorite_sync_failed_count">%d с ошибкой</string>
+
+    <string name="channel4_name">Синхронизация избранного</string>
+    <string name="channel4_description">Используется для показа хода синхронизации избранного</string>
+</resources>

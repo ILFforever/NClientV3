@@ -1,17 +1,26 @@
 package com.maxwai.nclientv3;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.os.Build;
 import android.os.Bundle;
-import android.text.TextUtils;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 
 import com.maxwai.nclientv3.adapters.FavoriteAdapter;
 import com.maxwai.nclientv3.api.components.Gallery;
@@ -181,24 +190,25 @@ public class FavoriteActivity extends BaseActivity {
             Toast.makeText(this, R.string.favorite_sync_login_required, Toast.LENGTH_LONG).show();
             return;
         }
-        // A sync started before this Activity existed may still be running.
+        // A sync started before this Activity existed may still be running. Show what it is
+        // doing rather than leaving the tap looking like it did nothing.
         if (FavoriteSyncManager.isRunning()) {
-            Toast.makeText(this, R.string.favorite_sync_in_progress, Toast.LENGTH_SHORT).show();
+            showSyncProgressDialog();
             return;
         }
+        requestNotificationPermission();
 
         syncRunning = true;
         if (syncItem != null) syncItem.setEnabled(false);
         refresher.setRefreshing(true);
         boolean started = FavoriteSyncManager.sync(this, new FavoriteSyncManager.Listener() {
             @Override
-            public void onProgress(boolean uploading, int completed, int total) {
+            public void onProgress(boolean writing, int completed, int total) {
                 runOnUiThread(() -> {
                     if (isFinishing() || isDestroyed()) return;
                     ActionBar actionBar = getSupportActionBar();
-                    if (actionBar != null) actionBar.setSubtitle(getString(uploading
-                        ? R.string.favorite_sync_upload_progress
-                        : R.string.favorite_sync_download_progress, completed, total));
+                    if (actionBar != null) actionBar.setSubtitle(FavoriteSyncManager
+                        .phaseText(FavoriteActivity.this, writing, completed, total));
                 });
             }
 
@@ -228,28 +238,63 @@ public class FavoriteActivity extends BaseActivity {
         String query = searchView == null ? null : searchView.getQuery().toString();
         pageSwitcher.setTotalPage(calculatePages(query));
         if (adapter != null) adapter.forceReload();
-        Toast.makeText(this, describeSync(result), Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, FavoriteSyncManager.describe(this, result), Toast.LENGTH_SHORT).show();
     }
 
     /**
-     * Builds the result toast from only the counts that are non-zero, so a quiet sync says so in
-     * three words instead of listing four zeroes.
+     * Live view of a sync that is already in flight. Polls the manager's snapshot rather than
+     * subscribing, so there is no listener to unregister if the dialog or Activity goes away
+     * mid-sync, and a dialog opened at any point still shows the current phase.
      */
-    private String describeSync(FavoriteSyncManager.Result result) {
-        List<String> parts = new ArrayList<>();
-        if (result.downloaded > 0)
-            parts.add(getString(R.string.favorite_sync_added, result.downloaded));
-        if (result.uploaded > 0)
-            parts.add(getString(R.string.favorite_sync_uploaded, result.uploaded));
-        int removed = result.removedLocal + result.removedRemote;
-        if (removed > 0) parts.add(getString(R.string.favorite_sync_removed, removed));
-        if (result.failed > 0)
-            parts.add(getString(R.string.favorite_sync_failed_count, result.failed));
+    private void showSyncProgressDialog() {
+        View content = getLayoutInflater().inflate(R.layout.dialog_sync_progress, null);
+        TextView phase = content.findViewById(R.id.phase);
+        ProgressBar bar = content.findViewById(R.id.progress);
 
-        if (parts.isEmpty()) return getString(R.string.favorite_sync_no_changes);
-        String summary = TextUtils.join(", ", parts);
-        return getString(result.firstSync
-            ? R.string.favorite_sync_first_run : R.string.favorite_sync_result, summary);
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.favorite_sync_notification_title)
+            .setView(content)
+            .setPositiveButton(R.string.hide, null)
+            .show();
+
+        Handler handler = new Handler(Looper.getMainLooper());
+        Runnable tick = new Runnable() {
+            @Override
+            public void run() {
+                if (!dialog.isShowing() || isFinishing() || isDestroyed()) return;
+                if (!FavoriteSyncManager.isRunning()) {
+                    phase.setText(R.string.favorite_sync_finished);
+                    bar.setIndeterminate(false);
+                    bar.setProgress(bar.getMax());
+                    return;
+                }
+                FavoriteSyncManager.Progress p = FavoriteSyncManager.getProgress();
+                phase.setText(FavoriteSyncManager.describeProgress(FavoriteActivity.this));
+                if (p.total > 0) {
+                    bar.setIndeterminate(false);
+                    bar.setMax(p.total);
+                    bar.setProgress(p.completed);
+                } else {
+                    bar.setIndeterminate(true);
+                }
+                handler.postDelayed(this, 500);
+            }
+        };
+        dialog.setOnDismissListener(d -> handler.removeCallbacksAndMessages(null));
+        tick.run();
+    }
+
+    /**
+     * The manifest declares POST_NOTIFICATIONS but nothing ever asked for it, so on Android 13+
+     * every notification the app posts was being dropped silently by NotificationSettings.
+     * Asked here rather than at startup so the prompt arrives with an obvious reason attached.
+     * The sync runs either way; only its progress notification depends on the answer.
+     */
+    private void requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return;
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+            == PackageManager.PERMISSION_GRANTED) return;
+        requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 2);
     }
 
     private void resetSyncUi() {

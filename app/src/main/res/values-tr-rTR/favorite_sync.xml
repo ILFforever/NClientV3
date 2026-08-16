@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="favorite_sync">Favorileri eşitle</string>
+    <string name="favorite_sync_login_required">Favorileri eşitlemek için giriş yapın veya bir API anahtarı ekleyin.</string>
+
+    <string name="favorite_sync_notification_title">Favoriler eşitleniyor</string>
+    <string name="favorite_sync_reading">Favori listeniz okunuyor…</string>
+    <string name="favorite_sync_reading_page">Favori listeniz okunuyor — sayfa %1$d / %2$d</string>
+    <string name="favorite_sync_writing">Değişiklikler hesabınıza kaydediliyor…</string>
+    <string name="favorite_sync_writing_count">Değişiklikler hesabınıza kaydediliyor — %1$d / %2$d</string>
+    <string name="favorite_sync_keep_open">Bu işlem arka planda çalışır. Bu ekrandan çıkabilirsiniz.</string>
+    <string name="favorite_sync_finished">Eşitleme tamamlandı</string>
+
+    <string name="favorite_sync_done">Favori eşitlemesi tamamlandı</string>
+    <string name="favorite_sync_failed_title">Favori eşitlemesi başarısız</string>
+    <string name="favorite_sync_failed">Favori eşitlemesi başarısız. Tekrar deneyin.</string>
+    <string name="favorite_sync_no_changes">Favoriler zaten eşitlenmiş</string>
+    <string name="favorite_sync_result">Eşitlendi: %1$s</string>
+    <string name="favorite_sync_first_run">Birleştirildi: %1$s. Kaldırmalar bundan sonra eşitlenecek.</string>
+    <string name="favorite_sync_added">%d eklendi</string>
+    <string name="favorite_sync_uploaded">%d yüklendi</string>
+    <string name="favorite_sync_removed">%d kaldırıldı</string>
+    <string name="favorite_sync_failed_count">%d başarısız</string>
+
+    <string name="channel4_name">Favori eşitleme</string>
+    <string name="channel4_description">Favoriler eşitlenirken ilerlemeyi göstermek için kullanılır</string>
+</resources>

@@ -174,19 +174,6 @@
     <string name="upload_date_format" formatted="true">Uploaded on %s at %s</string>
     <string name="favorite_count_format" formatted="true">%d favorites</string>
     <string name="favorite_manga">Favorite galleries</string>
-    <string name="favorite_sync">Sync favorites</string>
-    <string name="favorite_sync_login_required">Log in or add an API key to sync favorites.</string>
-    <string name="favorite_sync_download_progress">Downloading favorites: %1$d / %2$d</string>
-    <string name="favorite_sync_upload_progress">Uploading favorites: %1$d / %2$d</string>
-    <string name="favorite_sync_no_changes">Favorites already in sync</string>
-    <string name="favorite_sync_in_progress">Sync already running</string>
-    <string name="favorite_sync_result">Synced: %1$s</string>
-    <string name="favorite_sync_first_run">Merged: %1$s. Removals sync from now on.</string>
-    <string name="favorite_sync_added">%d added</string>
-    <string name="favorite_sync_uploaded">%d uploaded</string>
-    <string name="favorite_sync_removed">%d removed</string>
-    <string name="favorite_sync_failed_count">%d failed</string>
-    <string name="favorite_sync_failed">Favorite sync failed. Try again.</string>
     <string name="favorite_update_failed">Could not update favorites. Nothing was changed.</string>
     <string name="setting_on_remove_ignored">The galleries with ignored tags will not be shown</string>
     <string name="setting_off_remove_ignored">The galleries with ignored tags will be blurred</string>

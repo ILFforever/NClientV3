@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="favorite_sync">同步收藏</string>
+    <string name="favorite_sync_login_required">請登入或新增 API 金鑰以同步收藏。</string>
+
+    <string name="favorite_sync_notification_title">正在同步收藏</string>
+    <string name="favorite_sync_reading">正在讀取你的收藏清單…</string>
+    <string name="favorite_sync_reading_page">正在讀取你的收藏清單 — 第 %1$d 頁，共 %2$d 頁</string>
+    <string name="favorite_sync_writing">正在將變更儲存至你的帳號…</string>
+    <string name="favorite_sync_writing_count">正在將變更儲存至你的帳號 — %1$d / %2$d</string>
+    <string name="favorite_sync_keep_open">此作業於背景執行。你可以離開此畫面。</string>
+    <string name="favorite_sync_finished">同步已結束</string>
+
+    <string name="favorite_sync_done">收藏同步完成</string>
+    <string name="favorite_sync_failed_title">收藏同步失敗</string>
+    <string name="favorite_sync_failed">收藏同步失敗，請重試。</string>
+    <string name="favorite_sync_no_changes">收藏已是最新</string>
+    <string name="favorite_sync_result">已同步：%1$s</string>
+    <string name="favorite_sync_first_run">已合併：%1$s。從現在起將同步刪除操作。</string>
+    <string name="favorite_sync_added">新增 %d 個</string>
+    <string name="favorite_sync_uploaded">上傳 %d 個</string>
+    <string name="favorite_sync_removed">移除 %d 個</string>
+    <string name="favorite_sync_failed_count">失敗 %d 個</string>
+
+    <string name="channel4_name">收藏同步</string>
+    <string name="channel4_description">用於顯示收藏同步的進度</string>
+</resources>

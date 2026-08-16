@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Fork-specific favorite sync strings. Kept out of strings.xml because that file is translated
+  by upstream's Crowdin project, which has no knowledge of these keys - anything added there
+  would stay English forever. This file is translated in-repo, like favorites_toolbar.xml.
+-->
+<resources>
+    <string name="favorite_sync">Sync favorites</string>
+    <string name="favorite_sync_login_required">Log in or add an API key to sync favorites.</string>
+
+    <string name="favorite_sync_notification_title">Syncing favorites</string>
+    <string name="favorite_sync_reading">Reading your favorites list…</string>
+    <string name="favorite_sync_reading_page">Reading your favorites list — page %1$d of %2$d</string>
+    <string name="favorite_sync_writing">Saving changes to your account…</string>
+    <string name="favorite_sync_writing_count">Saving changes to your account — %1$d of %2$d</string>
+    <string name="favorite_sync_keep_open">This runs in the background. You can leave this screen.</string>
+    <string name="favorite_sync_finished">Sync finished</string>
+
+    <string name="favorite_sync_done">Favorite sync complete</string>
+    <string name="favorite_sync_failed_title">Favorite sync failed</string>
+    <string name="favorite_sync_failed">Favorite sync failed. Try again.</string>
+    <string name="favorite_sync_no_changes">Favorites already in sync</string>
+    <string name="favorite_sync_result">Synced: %1$s</string>
+    <string name="favorite_sync_first_run">Merged: %1$s. Removals sync from now on.</string>
+    <string name="favorite_sync_added">%d added</string>
+    <string name="favorite_sync_uploaded">%d uploaded</string>
+    <string name="favorite_sync_removed">%d removed</string>
+    <string name="favorite_sync_failed_count">%d failed</string>
+
+    <string name="channel4_name">Favorite sync</string>
+    <string name="channel4_description">Used to show progress while favorites are syncing</string>
+</resources>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="favorite_sync">Favoriten synchronisieren</string>
+    <string name="favorite_sync_login_required">Melde dich an oder füge einen API-Schlüssel hinzu, um Favoriten zu synchronisieren.</string>
+
+    <string name="favorite_sync_notification_title">Favoriten werden synchronisiert</string>
+    <string name="favorite_sync_reading">Favoritenliste wird gelesen…</string>
+    <string name="favorite_sync_reading_page">Favoritenliste wird gelesen — Seite %1$d von %2$d</string>
+    <string name="favorite_sync_writing">Änderungen werden in deinem Konto gespeichert…</string>
+    <string name="favorite_sync_writing_count">Änderungen werden in deinem Konto gespeichert — %1$d von %2$d</string>
+    <string name="favorite_sync_keep_open">Dies läuft im Hintergrund. Du kannst diesen Bildschirm verlassen.</string>
+    <string name="favorite_sync_finished">Synchronisierung beendet</string>
+
+    <string name="favorite_sync_done">Favoriten-Synchronisierung abgeschlossen</string>
+    <string name="favorite_sync_failed_title">Favoriten-Synchronisierung fehlgeschlagen</string>
+    <string name="favorite_sync_failed">Favoriten-Synchronisierung fehlgeschlagen. Versuche es erneut.</string>
+    <string name="favorite_sync_no_changes">Favoriten sind bereits synchron</string>
+    <string name="favorite_sync_result">Synchronisiert: %1$s</string>
+    <string name="favorite_sync_first_run">Zusammengeführt: %1$s. Entfernungen werden ab jetzt synchronisiert.</string>
+    <string name="favorite_sync_added">%d hinzugefügt</string>
+    <string name="favorite_sync_uploaded">%d hochgeladen</string>
+    <string name="favorite_sync_removed">%d entfernt</string>
+    <string name="favorite_sync_failed_count">%d fehlgeschlagen</string>
+
+    <string name="channel4_name">Favoriten-Synchronisierung</string>
+    <string name="channel4_description">Wird verwendet, um den Fortschritt der Favoriten-Synchronisierung anzuzeigen</string>
+</resources>
