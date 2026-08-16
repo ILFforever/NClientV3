@@ -47,6 +47,40 @@ public class FavoriteActivity extends BaseActivity {
     private SearchView searchView;
     private MenuItem syncItem;
     private boolean syncRunning = false;
+    /**
+     * Held for the lifetime of the Activity rather than created per sync, so it can be attached in
+     * {@link #onCreate} - picking up a sync that an earlier instance of this screen started - and
+     * detached in {@link #onDestroy} instead of being retained by the sync thread until the run
+     * ends. All three callbacks arrive on the sync thread.
+     */
+    private final FavoriteSyncManager.Listener syncListener = new FavoriteSyncManager.Listener() {
+        @Override
+        public void onProgress(boolean writing, int completed, int total) {
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                ActionBar actionBar = getSupportActionBar();
+                if (actionBar != null) actionBar.setSubtitle(FavoriteSyncManager
+                    .phaseText(FavoriteActivity.this, writing, completed, total));
+            });
+        }
+
+        @Override
+        public void onComplete(FavoriteSyncManager.Result result) {
+            runOnUiThread(() -> {
+                if (!isFinishing() && !isDestroyed()) finishSync(result);
+            });
+        }
+
+        @Override
+        public void onFailure() {
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                resetSyncUi();
+                Toast.makeText(FavoriteActivity.this,
+                    R.string.favorite_sync_failed, Toast.LENGTH_LONG).show();
+            });
+        }
+    };
 
     public static int getEntryPerPage() {
         return Global.isInfiniteScrollFavorite() ? Integer.MAX_VALUE : ENTRY_PER_PAGE;
@@ -85,6 +119,17 @@ public class FavoriteActivity extends BaseActivity {
             }
         });
 
+        // Subscribe unconditionally: a sync started by an earlier instance of this screen may
+        // still be running, and only a subscriber gets its completion - and with it the reload
+        // that makes the newly synced favorites appear.
+        FavoriteSyncManager.addListener(syncListener);
+        if (FavoriteSyncManager.isRunning()) syncRunning = true;
+    }
+
+    @Override
+    protected void onDestroy() {
+        FavoriteSyncManager.removeListener(syncListener);
+        super.onDestroy();
     }
 
     public int getActualPage() {
@@ -185,14 +230,14 @@ public class FavoriteActivity extends BaseActivity {
     }
 
     private void syncFavorites() {
-        if (syncRunning) return;
         if (!Login.canAccessAuthenticatedApi(this)) {
             Toast.makeText(this, R.string.favorite_sync_login_required, Toast.LENGTH_LONG).show();
             return;
         }
-        // A sync started before this Activity existed may still be running. Show what it is
-        // doing rather than leaving the tap looking like it did nothing.
-        if (FavoriteSyncManager.isRunning()) {
+        // A sync may already be in flight, started either by this screen or before it existed.
+        // Either way this instance is subscribed, so show what it is doing rather than leaving
+        // the tap looking like it did nothing.
+        if (syncRunning || FavoriteSyncManager.isRunning()) {
             showSyncProgressDialog();
             return;
         }
@@ -201,36 +246,9 @@ public class FavoriteActivity extends BaseActivity {
         syncRunning = true;
         if (syncItem != null) syncItem.setEnabled(false);
         refresher.setRefreshing(true);
-        boolean started = FavoriteSyncManager.sync(this, new FavoriteSyncManager.Listener() {
-            @Override
-            public void onProgress(boolean writing, int completed, int total) {
-                runOnUiThread(() -> {
-                    if (isFinishing() || isDestroyed()) return;
-                    ActionBar actionBar = getSupportActionBar();
-                    if (actionBar != null) actionBar.setSubtitle(FavoriteSyncManager
-                        .phaseText(FavoriteActivity.this, writing, completed, total));
-                });
-            }
-
-            @Override
-            public void onComplete(FavoriteSyncManager.Result result) {
-                runOnUiThread(() -> {
-                    if (!isFinishing() && !isDestroyed()) finishSync(result);
-                });
-            }
-
-            @Override
-            public void onFailure() {
-                runOnUiThread(() -> {
-                    if (isFinishing() || isDestroyed()) return;
-                    resetSyncUi();
-                    Toast.makeText(FavoriteActivity.this,
-                        R.string.favorite_sync_failed, Toast.LENGTH_LONG).show();
-                });
-            }
-        });
-        // Lost the race with a sync started elsewhere; hand the UI back.
-        if (!started) resetSyncUi();
+        // Losing the race with a sync started elsewhere is not a failure: this screen is already
+        // subscribed to that run, so keep the syncing UI and let its callbacks drive it.
+        if (!FavoriteSyncManager.sync(this)) showSyncProgressDialog();
     }
 
     private void finishSync(FavoriteSyncManager.Result result) {

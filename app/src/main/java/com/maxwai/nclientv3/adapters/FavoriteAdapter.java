@@ -50,6 +50,14 @@ public class FavoriteAdapter extends RecyclerView.Adapter<GenericAdapter.ViewHol
     private boolean force = false;
     private boolean sortByTitle = false;
 
+    /**
+     * Snapshot of the rows currently bound, kept so a refresh can diff against a plain list on a
+     * worker thread instead of walking the live cursor - which only the UI thread may touch, and
+     * which is the whole reason the diff used to run there. Written on the UI thread in
+     * {@link #publishResults}, read on the filter's worker thread.
+     */
+    private volatile List<RowSnapshot> rowSnapshots = Collections.emptyList();
+
     private static final class RowSnapshot {
         final long id;
         final String content;
@@ -57,6 +65,21 @@ public class FavoriteAdapter extends RecyclerView.Adapter<GenericAdapter.ViewHol
         RowSnapshot(long id, String content) {
             this.id = id;
             this.content = content;
+        }
+    }
+
+    /**
+     * A refresh that has been fetched and diffed but not yet applied.
+     */
+    private static final class PendingRefresh {
+        final Cursor cursor;
+        final List<RowSnapshot> rows;
+        final DiffUtil.DiffResult diff;
+
+        PendingRefresh(Cursor cursor, List<RowSnapshot> rows, DiffUtil.DiffResult diff) {
+            this.cursor = cursor;
+            this.rows = rows;
+            this.diff = diff;
         }
     }
 
@@ -232,21 +255,14 @@ public class FavoriteAdapter extends RecyclerView.Adapter<GenericAdapter.ViewHol
                 LogUtility.d(lastQuery + "LASTQERY");
                 force = false;
                 Cursor c = Queries.FavoriteTable.getAllFavoriteGalleriesCursor(lastQuery, sortByTitle, perPage, (activity.getActualPage() - 1) * perPage);
-                results.count = c.getCount();
-                results.values = c;
-                LogUtility.d("FILTERING3");
-                LogUtility.d(results.count + ";" + results.values);
-                setRefresh(false);
-                return results;
-            }
-
-            @Override
-            protected void publishResults(CharSequence constraint, FilterResults results) {
-                if (results == null) return;
-                setRefresh(true);
-                Cursor newCursor = (Cursor) results.values;
-                List<RowSnapshot> oldRows = snapshotRows(cursor);
-                List<RowSnapshot> newRows = snapshotRows(newCursor);
+                // Snapshot and diff here, on the worker thread. Infinite scroll asks for every
+                // row at once, so on a large library this is thousands of rows' worth of column
+                // reads and string building - long enough to be a visible stall if it ran in
+                // publishResults. The new cursor is not published yet, so this thread owns it;
+                // the old side is compared through rowSnapshots rather than the live cursor,
+                // which the UI thread is still binding from.
+                List<RowSnapshot> oldRows = rowSnapshots;
+                List<RowSnapshot> newRows = snapshotRows(c);
                 DiffUtil.DiffResult diff = DiffUtil.calculateDiff(new DiffUtil.Callback() {
                     @Override
                     public int getOldListSize() {
@@ -269,8 +285,22 @@ public class FavoriteAdapter extends RecyclerView.Adapter<GenericAdapter.ViewHol
                             newRows.get(newItemPosition).content);
                     }
                 });
-                updateCursor(newCursor);
-                diff.dispatchUpdatesTo(FavoriteAdapter.this);
+                results.count = c.getCount();
+                results.values = new PendingRefresh(c, newRows, diff);
+                LogUtility.d("FILTERING3");
+                LogUtility.d(results.count + ";" + results.values);
+                setRefresh(false);
+                return results;
+            }
+
+            @Override
+            protected void publishResults(CharSequence constraint, FilterResults results) {
+                if (results == null) return;
+                setRefresh(true);
+                PendingRefresh refresh = (PendingRefresh) results.values;
+                updateCursor(refresh.cursor);
+                rowSnapshots = refresh.rows;
+                refresh.diff.dispatchUpdatesTo(FavoriteAdapter.this);
 
                 setRefresh(false);
             }

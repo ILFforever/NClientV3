@@ -28,6 +28,7 @@ import java.util.Locale;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
 
 public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.ViewHolder> {
     private final List<Comment> comments;
@@ -54,8 +55,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.ViewHold
 
     @Override
     public void onBindViewHolder(@NonNull CommentAdapter.ViewHolder holder, int pos) {
-        int position = holder.getBindingAdapterPosition();
-        Comment c = comments.get(position);
+        Comment c = comments.get(pos);
         holder.layout.setOnClickListener(v1 -> context.runOnUiThread(() -> holder.body.setMaxLines(holder.body.getMaxLines() == 7 ? 999 : 7)));
         holder.close.setVisibility(c.getPosterId() != userId ? View.GONE : View.VISIBLE);
         holder.user.setText(c.getUsername());
@@ -82,13 +82,23 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.ViewHold
 
                 @Override
                 public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                    if (response.body().string().contains("true")) {
-                        if (context instanceof com.maxwai.nclientv3.CommentActivity) {
-                            ((com.maxwai.nclientv3.CommentActivity) context).removeComment(c.getId());
-                        }
-                        comments.remove(position);
-                        context.runOnUiThread(() -> notifyItemRemoved(position));
+                    try (response) {
+                        ResponseBody body = response.body();
+                        if (body == null || !body.string().contains("true")) return;
                     }
+                    if (context instanceof com.maxwai.nclientv3.CommentActivity) {
+                        ((com.maxwai.nclientv3.CommentActivity) context).removeComment(c.getId());
+                    }
+                    // Locate the row by id on the UI thread rather than reusing the position this
+                    // holder was bound at: an insert from addComment shifts every later row, so
+                    // by the time the response lands that index can name a different comment.
+                    // Mutating the list here also keeps the write on the thread that reads it.
+                    context.runOnUiThread(() -> {
+                        int index = indexOfComment(c.getId());
+                        if (index < 0) return;
+                        comments.remove(index);
+                        notifyItemRemoved(index);
+                    });
                 }
             }).setMethod("POST", AuthRequest.EMPTY_BODY).start();
         });
@@ -104,8 +114,17 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.ViewHold
     }
 
     public void addComment(Comment c) {
-        comments.add(0, c);
-        context.runOnUiThread(() -> notifyItemInserted(0));
+        context.runOnUiThread(() -> {
+            comments.add(0, c);
+            notifyItemInserted(0);
+        });
+    }
+
+    private int indexOfComment(int id) {
+        for (int i = 0; i < comments.size(); i++) {
+            if (comments.get(i).getId() == id) return i;
+        }
+        return -1;
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {

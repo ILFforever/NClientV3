@@ -3,9 +3,11 @@ package com.maxwai.nclientv3.settings;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
+import com.maxwai.nclientv3.R;
 import com.maxwai.nclientv3.api.components.Gallery;
 import com.maxwai.nclientv3.api.components.GenericGallery;
 import com.maxwai.nclientv3.async.database.Queries;
@@ -24,8 +26,37 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class Favorites {
+    /**
+     * How far a favorite change actually got. The distinction matters because two of these are
+     * successes that did not reach the account, and telling the user "failed" for those would be
+     * wrong - the gallery is favorited, just only here.
+     */
+    public enum Outcome {
+        /**
+         * Written to the account and mirrored locally.
+         */
+        SYNCED,
+        /**
+         * Saved on this device only; no account is connected.
+         */
+        LOCAL_ONLY,
+        /**
+         * Saved on this device only, because the account session had expired. The next sync
+         * pushes it up once the user signs in again.
+         */
+        SESSION_EXPIRED,
+        /**
+         * Nothing was written anywhere.
+         */
+        FAILED;
+
+        public boolean isSuccess() {
+            return this != FAILED;
+        }
+    }
+
     public interface UpdateCallback {
-        void onComplete(boolean success, boolean favorite);
+        void onComplete(@NonNull Outcome outcome, boolean favorite);
     }
 
 
@@ -46,7 +77,7 @@ public class Favorites {
                                    boolean favorite, @NonNull UpdateCallback callback) {
         if (!Login.canAccessAuthenticatedApi(context)) {
             updateLocal(gallery, favorite);
-            callback.onComplete(true, favorite);
+            callback.onComplete(Outcome.LOCAL_ONLY, favorite);
             return;
         }
 
@@ -59,30 +90,56 @@ public class Favorites {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 LogUtility.e("Favorite update failed", e);
-                completeOnMain(callback, false, !favorite);
+                completeOnMain(callback, Outcome.FAILED, !favorite);
             }
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (response) {
+                    // An expired session used to land in the generic failure branch below, which
+                    // wrote nothing anywhere: the toggle sprang back and the user simply could not
+                    // favorite anything, with no indication why. Save it locally instead - the
+                    // request was refused, but the user's intent is still perfectly expressible on
+                    // this device, and the next sync after signing in pushes it up.
+                    if (response.code() == 401 || response.code() == 403) {
+                        LogUtility.d("Favorite refused with HTTP " + response.code()
+                            + "; saving locally");
+                        Login.onSessionExpired(context);
+                        updateLocal(gallery, favorite);
+                        completeOnMain(callback, Outcome.SESSION_EXPIRED, favorite);
+                        return;
+                    }
                     if (!response.isSuccessful() || response.body() == null) {
-                        completeOnMain(callback, false, !favorite);
+                        completeOnMain(callback, Outcome.FAILED, !favorite);
                         return;
                     }
                     boolean remoteFavorite = new JSONObject(response.body().string())
                         .getBoolean("favorited");
                     if (remoteFavorite != favorite) {
-                        completeOnMain(callback, false, !favorite);
+                        completeOnMain(callback, Outcome.FAILED, !favorite);
                         return;
                     }
                     updateLocal(gallery, favorite);
-                    completeOnMain(callback, true, favorite);
+                    completeOnMain(callback, Outcome.SYNCED, favorite);
                 } catch (Exception e) {
                     LogUtility.e("Favorite response failed", e);
-                    completeOnMain(callback, false, !favorite);
+                    completeOnMain(callback, Outcome.FAILED, !favorite);
                 }
             }
         });
+    }
+
+    /**
+     * Turns an outcome into a message, in one place so the favorite buttons scattered across the
+     * app cannot describe the same result differently. Says nothing for {@link Outcome#SYNCED} or
+     * {@link Outcome#LOCAL_ONLY}: the button already changed state, and neither case needs excusing.
+     */
+    public static void toastOutcome(@NonNull Context context, @NonNull Outcome outcome) {
+        if (outcome == Outcome.SYNCED || outcome == Outcome.LOCAL_ONLY) return;
+        Toast.makeText(context, outcome == Outcome.SESSION_EXPIRED
+                ? R.string.favorite_saved_session_expired
+                : R.string.favorite_update_failed,
+            Toast.LENGTH_LONG).show();
     }
 
     private static void updateLocal(Gallery gallery, boolean favorite) {
@@ -90,8 +147,9 @@ public class Favorites {
         else removeFavorite(gallery);
     }
 
-    private static void completeOnMain(UpdateCallback callback, boolean success, boolean favorite) {
-        new Handler(Looper.getMainLooper()).post(() -> callback.onComplete(success, favorite));
+    private static void completeOnMain(UpdateCallback callback, @NonNull Outcome outcome,
+                                       boolean favorite) {
+        new Handler(Looper.getMainLooper()).post(() -> callback.onComplete(outcome, favorite));
     }
 
 }

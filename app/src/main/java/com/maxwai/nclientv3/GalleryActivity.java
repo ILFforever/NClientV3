@@ -278,12 +278,10 @@ public class GalleryActivity extends BaseActivity {
         } else if (id == R.id.favorite_manager) {
             boolean targetFavorite = !isLocalFavorite;
             item.setEnabled(false);
-            Favorites.setFavorite(this, (Gallery) gallery, targetFavorite, (success, favorite) -> {
+            Favorites.setFavorite(this, (Gallery) gallery, targetFavorite, (outcome, favorite) -> {
                 item.setEnabled(true);
-                if (!success) {
-                    Toast.makeText(this, R.string.favorite_update_failed, Toast.LENGTH_SHORT).show();
-                    return;
-                }
+                Favorites.toastOutcome(this, outcome);
+                if (!outcome.isSuccess()) return;
                 isLocalFavorite = favorite;
                 item.setIcon(isLocalFavorite ? R.drawable.ic_favorite : R.drawable.ic_favorite_border);
                 Global.setTint(this, item.getIcon());

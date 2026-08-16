@@ -32,6 +32,17 @@ jobs:
                     echo "keyAlias=dummy" >> keystore.properties
                     echo "storeFile=dummy.jks" >> keystore.properties
 
+            -   name: Run unit tests
+                run: ./gradlew testPost28DebugUnitTest
+
+            -   name: Upload test report
+                if: always()
+                uses: actions/upload-artifact@v7
+                with:
+                    name: Unit test report
+                    path: app/build/reports/tests/
+                    retention-days: 30
+
             -   name: Assemble Debug with Gradle
                 run: ./gradlew assembleDebug
 
@@ -43,4 +54,19 @@ jobs:
                 with:
                     name: Debug APKs
                     path: app/build/outputs/apk/
+                    retention-days: 30
+
+            # Reported, not enforced: lint currently has a backlog of pre-existing errors, so
+            # abortOnError stays off until they are triaged. Publishing the report at least makes
+            # the trend visible on every PR instead of only when someone runs lint by hand.
+            -   name: Lint
+                if: always()
+                run: ./gradlew lintPost28Debug
+
+            -   name: Upload lint report
+                if: always()
+                uses: actions/upload-artifact@v7
+                with:
+                    name: Lint report
+                    path: app/build/reports/lint-results-post28Debug.html
                     retention-days: 30

@@ -101,6 +101,14 @@ android {
         @Suppress("UnstableApiUsage")
         generateLocaleConfig = true
     }
+    testOptions {
+        unitTests {
+            // Android framework calls return defaults rather than throwing "Stub!". Tests here
+            // should stick to logic that does not touch the framework at all; this only keeps an
+            // incidental call from failing a test that is really about something else.
+            isReturnDefaultValues = true
+        }
+    }
 
 }
 
@@ -178,6 +186,10 @@ dependencies {
     implementation("com.github.yukuku:ambilwarna:2.0.1")
     // fast scroll
     implementation("me.zhanghai.android.fastscroll:library:1.3.0")
+
+// Local JVM tests. Instrumented tests stay disabled (see beforeVariants above); these cover the
+// pure logic that a compile-only CI cannot catch being wrong.
+    testImplementation("junit:junit:4.13.2")
 }
 
 

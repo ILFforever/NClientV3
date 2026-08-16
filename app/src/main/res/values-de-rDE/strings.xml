@@ -328,4 +328,5 @@
     <string name="auth_error">Problem bei Authentifizierung</string>
     <string name="auth_title">Biometrische Anmeldung für NClient</string>
     <string name="auth_subtitle">Anmelden mit Biometrischen Daten</string>
+    <string name="favorite_saved_session_expired">Deine Sitzung ist abgelaufen. Auf diesem Gerät gespeichert – melde dich erneut an, um es mit deinem Konto zu synchronisieren.</string>
 </resources>

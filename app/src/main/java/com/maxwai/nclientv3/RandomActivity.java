@@ -7,7 +7,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.ActionBar;
@@ -81,12 +80,10 @@ public class RandomActivity extends GeneralActivity {
         favorite.setOnClickListener(v -> {
             if (loadedGallery != null) {
                 favorite.setEnabled(false);
-                Favorites.setFavorite(this, loadedGallery, !isFavorite, (success, favoriteState) -> {
+                Favorites.setFavorite(this, loadedGallery, !isFavorite, (outcome, favoriteState) -> {
                     favorite.setEnabled(true);
-                    if (!success) {
-                        Toast.makeText(this, R.string.favorite_update_failed, Toast.LENGTH_SHORT).show();
-                        return;
-                    }
+                    Favorites.toastOutcome(this, outcome);
+                    if (!outcome.isSuccess()) return;
                     isFavorite = favoriteState;
                     favoriteUpdateButton();
                 });

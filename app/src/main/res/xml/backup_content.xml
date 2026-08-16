@@ -7,4 +7,23 @@
     <include
         domain="sharedpref"
         path="." />
+
+    <!--
+    Credentials are excluded rather than backed up. A backup leaves the device and is restorable
+    onto another one, so an API key, a user token or a live cookie session in it is a credential
+    copy the user never agreed to make. They are also the least useful thing to restore: tokens
+    carry an expiry and cookie sessions are bound to the device that obtained them, so a restored
+    copy is usually dead on arrival and only produces a confusing half-logged-in state.
+    Keep in sync with data_extraction_rules.xml, which covers Android 12 and above.
+    -->
+    <exclude
+        domain="sharedpref"
+        path="Auth.xml" />
+    <exclude
+        domain="sharedpref"
+        path="UserToken.xml" />
+    <!-- Written by SharedPrefsCookiePersistor; see Global.reloadHttpClient. -->
+    <exclude
+        domain="sharedpref"
+        path="Login.xml" />
 </full-backup-content>

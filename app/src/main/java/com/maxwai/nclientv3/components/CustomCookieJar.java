@@ -5,6 +5,7 @@ import androidx.annotation.NonNull;
 import com.franmontiel.persistentcookiejar.ClearableCookieJar;
 import com.franmontiel.persistentcookiejar.cache.CookieCache;
 import com.franmontiel.persistentcookiejar.persistence.CookiePersistor;
+import com.maxwai.nclientv3.utility.Utility;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -46,11 +47,20 @@ public class CustomCookieJar implements ClearableCookieJar {
         persistor.saveAll(filterPersistentCookies(cookies));
     }
 
+    /**
+     * Unlike the upstream jar this does not match each cookie against the request URL, because
+     * session cookies are stored host-only against whichever mirror was active when they were set
+     * and would then stop being sent the moment the user switched mirrors, or asked for a
+     * subdomain. The site check below is what keeps that leniency from reaching third parties:
+     * the same client also fetches GitHub releases, and login cookies have no business going
+     * there. See {@link Utility#isSiteHost}.
+     */
     @NonNull
     @Override
     synchronized public List<Cookie> loadForRequest(@NonNull HttpUrl url) {
         List<Cookie> cookiesToRemove = new ArrayList<>();
         List<Cookie> validCookies = new ArrayList<>();
+        boolean ownSite = Utility.isSiteHost(url.host());
 
         for (Iterator<Cookie> it = cache.iterator(); it.hasNext(); ) {
             Cookie currentCookie = it.next();
@@ -59,7 +69,7 @@ public class CustomCookieJar implements ClearableCookieJar {
                 cookiesToRemove.add(currentCookie);
                 it.remove();
 
-            } else {
+            } else if (ownSite) {
                 validCookies.add(currentCookie);
             }
         }

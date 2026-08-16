@@ -28,6 +28,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 
 public class Utility {
@@ -44,6 +45,33 @@ public class Utility {
 
     public static String getHost() {
         return Global.getMirror();
+    }
+
+    /**
+     * True when a host belongs to the site this app talks to: the configured mirror or the
+     * original domain, or any subdomain of either - the i./t. image hosts among them.
+     * <p>
+     * One OkHttp client serves every destination, including unrelated ones such as GitHub's
+     * release API, so anything that attaches credentials has to ask this before trusting the
+     * client it was handed. Deliberately looser than per-cookie domain matching: session cookies
+     * are stored host-only against whichever mirror was active when they were set, so a strict
+     * match would sign the user out the moment they switched mirrors.
+     */
+    public static boolean isSiteHost(@Nullable String host) {
+        if (host == null || host.isEmpty()) return false;
+        return belongsToSite(host, getHost()) || belongsToSite(host, ORIGINAL_URL);
+    }
+
+    /**
+     * Package-private rather than private so the suffix rule can be unit tested directly: it is
+     * what stands between the session cookies and every third-party host the shared client talks
+     * to, and getting "evil-nhentai.net" wrong would not show up in any build.
+     */
+    static boolean belongsToSite(@NonNull String host, @Nullable String site) {
+        if (site == null || site.isEmpty()) return false;
+        String normalizedHost = host.toLowerCase(Locale.ROOT);
+        String normalizedSite = site.toLowerCase(Locale.ROOT);
+        return normalizedHost.equals(normalizedSite) || normalizedHost.endsWith("." + normalizedSite);
     }
 
     /**

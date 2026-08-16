@@ -175,6 +175,7 @@
     <string name="favorite_count_format" formatted="true">%d favorites</string>
     <string name="favorite_manga">Favorite galleries</string>
     <string name="favorite_update_failed">Could not update favorites. Nothing was changed.</string>
+    <string name="favorite_saved_session_expired">Your session expired. Saved on this device — sign in again to sync it to your account.</string>
     <string name="setting_on_remove_ignored">The galleries with ignored tags will not be shown</string>
     <string name="setting_off_remove_ignored">The galleries with ignored tags will be blurred</string>
     <string name="remove_ignored_galleries">Remove ignored galleries</string>

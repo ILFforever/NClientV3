@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import okhttp3.Request;
@@ -71,9 +72,29 @@ public final class FavoriteSyncManager {
     private static final int READ_BURST_PAGES = 14;
     private static final int MAX_ATTEMPTS = 4;
     private static final AtomicBoolean RUNNING = new AtomicBoolean(false);
+    /**
+     * Whoever currently wants callbacks. A sync outlives the screen that started it, so listeners
+     * subscribe and unsubscribe independently of the run rather than being handed to it: an
+     * Activity recreated mid-sync can still receive the completion that its predecessor started,
+     * and a destroyed one stops being retained by the sync thread.
+     */
+    private static final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList<>();
     private static volatile Progress progress = new Progress(false, 0, 0);
 
     private FavoriteSyncManager() {
+    }
+
+    /**
+     * Subscribes to the running sync, or to the next one. Safe to call when nothing is running.
+     * Every caller must pair this with {@link #removeListener} when it goes away, or the sync
+     * thread keeps its listener - and whatever that listener captures - alive for the whole run.
+     */
+    public static void addListener(@NonNull Listener listener) {
+        listeners.addIfAbsent(listener);
+    }
+
+    public static void removeListener(@NonNull Listener listener) {
+        listeners.remove(listener);
     }
 
     /**
@@ -82,9 +103,9 @@ public final class FavoriteSyncManager {
      * start as soon as the user leaves and re-enters the screen. Two runs would race the same
      * rows, halve the shared rate budget and each write a baseline.
      *
-     * @return false if a sync is already in flight, in which case the listener is never called
+     * @return false if a sync is already in flight; subscribed listeners still hear that one out
      */
-    public static boolean sync(@NonNull Context context, @NonNull Listener listener) {
+    public static boolean sync(@NonNull Context context) {
         if (!RUNNING.compareAndSet(false, true)) return false;
         progress = new Progress(false, 0, 0);
         Context app = context.getApplicationContext();
@@ -101,14 +122,14 @@ public final class FavoriteSyncManager {
                     public void onProgress(boolean writing, int completed, int total) {
                         progress = new Progress(writing, completed, total);
                         publishProgress(app, notification, notificationId, writing, completed, total);
-                        listener.onProgress(writing, completed, total);
+                        for (Listener l : listeners) l.onProgress(writing, completed, total);
                     }
 
                     @Override
                     public void onComplete(@NonNull Result result) {
                         publishResult(app, notification, notificationId,
                             R.string.favorite_sync_done, describe(app, result));
-                        listener.onComplete(result);
+                        for (Listener l : listeners) l.onComplete(result);
                     }
 
                     @Override
@@ -116,7 +137,7 @@ public final class FavoriteSyncManager {
                         publishResult(app, notification, notificationId,
                             R.string.favorite_sync_failed_title,
                             app.getString(R.string.favorite_sync_failed));
-                        listener.onFailure();
+                        for (Listener l : listeners) l.onFailure();
                     }
                 });
             } finally {
@@ -231,30 +252,14 @@ public final class FavoriteSyncManager {
             Set<Integer> baseline = hasBaseline
                 ? Queries.FavoriteSyncBaselineTable.getBaselineIds() : new HashSet<>();
 
-            List<Integer> toDownload = new ArrayList<>();
-            List<Integer> toUpload = new ArrayList<>();
-            List<Integer> toDeleteLocal = new ArrayList<>();
-            List<Integer> toDeleteRemote = new ArrayList<>();
-
-            for (int id : remoteIds) {
-                if (localIds.contains(id)) continue;
-                // Known to the baseline but gone locally means it was unfavorited in the app.
-                if (hasBaseline && baseline.contains(id)) toDeleteRemote.add(id);
-                else toDownload.add(id);
-            }
-            // Oldest first so the upload order matches the order they were favorited locally.
-            for (int id : localIdsOldestFirst) {
-                if (remoteIds.contains(id)) continue;
-                if (hasBaseline && baseline.contains(id)) toDeleteLocal.add(id);
-                else toUpload.add(id);
-            }
+            Plan plan = plan(remoteIds, localIdsOldestFirst, baseline, hasBaseline);
 
             // Refresh stored metadata for everything the server still knows about. Only entries
             // that are new to this device get a sort time: they are ordered by remote position so
             // SQLite reproduces the API's newest-first order. Galleries the user already had keep
             // the time they were originally favorited, otherwise every sync would rewrite the
             // whole list into whatever order the server happens to report.
-            Set<Integer> deletingRemote = new HashSet<>(toDeleteRemote);
+            Set<Integer> deletingRemote = new HashSet<>(plan.toDeleteRemote);
             int position = 0;
             long newestRemoteTime = System.currentTimeMillis();
             for (Map.Entry<Integer, JSONObject> entry : remoteItems.entrySet()) {
@@ -267,64 +272,93 @@ public final class FavoriteSyncManager {
                 }
             }
 
-            int failed = 0;
+            Tally tally = new Tally();
             int completed = 0;
-            int totalWrites = toUpload.size() + toDeleteRemote.size();
+            int totalWrites = plan.toUpload.size() + plan.toDeleteRemote.size();
 
-            for (int id : toUpload) {
+            for (int id : plan.toUpload) {
                 WriteOutcome outcome = write(context, id, true);
                 if (outcome == WriteOutcome.DISABLED)
                     throw new IOException("Favorites are disabled server-side");
+                if (outcome == WriteOutcome.EXPIRED)
+                    throw new IOException("Session expired mid-sync");
                 // Deliberately does not touch the sort time. Pushing an existing local favorite
                 // to the account is reconciliation, not re-favoriting it, so it should stay where
                 // the user left it - otherwise the list visibly reshuffles one row per request.
+                tally.recordUpload(outcome);
                 if (outcome == WriteOutcome.GONE) {
                     // The gallery no longer exists upstream; drop it rather than retry forever.
                     Queries.FavoriteTable.removeFavorite(id);
                     localIds.remove(id);
-                } else {
-                    failed++;
                 }
                 listener.onProgress(true, ++completed, totalWrites);
             }
 
-            for (int id : toDeleteRemote) {
+            for (int id : plan.toDeleteRemote) {
                 WriteOutcome outcome = write(context, id, false);
                 if (outcome == WriteOutcome.DISABLED)
                     throw new IOException("Favorites are disabled server-side");
-                // A gallery that is already gone upstream counts as successfully removed.
-                if (outcome == WriteOutcome.FAILED) failed++;
-                else remoteIds.remove(id);
+                if (outcome == WriteOutcome.EXPIRED)
+                    throw new IOException("Session expired mid-sync");
+                tally.recordRemoteDelete(outcome);
                 listener.onProgress(true, ++completed, totalWrites);
             }
 
-            for (int id : toDeleteLocal) {
+            for (int id : plan.toDeleteLocal) {
                 Queries.FavoriteTable.removeFavorite(id);
                 localIds.remove(id);
             }
 
-            // The reconciled set is what both sides should now hold.
+            // The reconciled set is what both sides should now hold. localIds already tracks every
+            // local change made above - downloads aside - including galleries dropped because they
+            // 404'd, which must not survive into the baseline as ids neither side holds.
             Set<Integer> reconciled = new HashSet<>(localIds);
-            reconciled.addAll(toDownload);
-            reconciled.addAll(toUpload);
-            reconciled.removeAll(toDeleteLocal);
-            reconciled.removeAll(toDeleteRemote);
+            reconciled.addAll(plan.toDownload);
 
             // Only advance the baseline when nothing failed. A baseline recorded over a partial
             // run would describe a state neither side is in, and the next sync would read those
             // gaps as deletions.
-            if (failed == 0) {
+            if (tally.failed == 0) {
                 Queries.FavoriteSyncBaselineTable.replaceBaseline(reconciled);
                 markBaselineReady(context);
             }
 
-            listener.onComplete(new Result(toDownload.size(), toUpload.size(),
-                toDeleteLocal.size(), toDeleteRemote.size(), failed, !hasBaseline));
+            listener.onComplete(new Result(plan.toDownload.size(), tally.uploaded,
+                plan.toDeleteLocal.size(), tally.removedRemote, tally.failed, !hasBaseline));
         } catch (IOException | JSONException | InterruptedException e) {
             if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             LogUtility.e("Favorite sync failed", e);
             listener.onFailure();
         }
+    }
+
+    /**
+     * Decides what each side needs, following the table in the class comment.
+     * <p>
+     * Deliberately free of Android, database and network types: a wrong branch here silently
+     * corrupts both libraries and is invisible in a build that only compiles, so this is the part
+     * that has to stay directly exercisable by a plain unit test.
+     *
+     * @param localIdsOldestFirst oldest first, so uploads go out in the order they were favorited
+     * @param hasBaseline         false on a first sync, where deletions cannot be told from
+     *                            additions and the plan must therefore be a pure union
+     */
+    static Plan plan(@NonNull Set<Integer> remoteIds, @NonNull List<Integer> localIdsOldestFirst,
+                     @NonNull Set<Integer> baseline, boolean hasBaseline) {
+        Plan plan = new Plan();
+        Set<Integer> localIds = new HashSet<>(localIdsOldestFirst);
+        for (int id : remoteIds) {
+            if (localIds.contains(id)) continue;
+            // Known to the baseline but gone locally means it was unfavorited in the app.
+            if (hasBaseline && baseline.contains(id)) plan.toDeleteRemote.add(id);
+            else plan.toDownload.add(id);
+        }
+        for (int id : localIdsOldestFirst) {
+            if (remoteIds.contains(id)) continue;
+            if (hasBaseline && baseline.contains(id)) plan.toDeleteLocal.add(id);
+            else plan.toUpload.add(id);
+        }
+        return plan;
     }
 
     /**
@@ -376,6 +410,9 @@ public final class FavoriteSyncManager {
             // 503 means the allow_favorites feature flag is off server-side; retrying every
             // remaining gallery would just burn the rate limit for nothing.
             if (response.code() == 503) return WriteOutcome.DISABLED;
+            // The credential is dead - ApiAuthInterceptor has already cleared it - so every
+            // remaining write in this run would be rejected the same way.
+            if (response.code() == 401 || response.code() == 403) return WriteOutcome.EXPIRED;
             if (!response.isSuccessful() || response.body() == null) return WriteOutcome.FAILED;
             boolean favorited = new JSONObject(response.body().string())
                 .optBoolean("favorited", !favorite);
@@ -430,7 +467,46 @@ public final class FavoriteSyncManager {
             .putBoolean(KEY_BASELINE_READY, false).apply();
     }
 
-    private enum WriteOutcome {OK, FAILED, GONE, DISABLED}
+    enum WriteOutcome {OK, FAILED, GONE, DISABLED, EXPIRED}
+
+    /**
+     * What a sync decided to do, before anything has been written.
+     */
+    static final class Plan {
+        final List<Integer> toDownload = new ArrayList<>();
+        final List<Integer> toUpload = new ArrayList<>();
+        final List<Integer> toDeleteLocal = new ArrayList<>();
+        final List<Integer> toDeleteRemote = new ArrayList<>();
+    }
+
+    /**
+     * What the write phase actually achieved, which is not the same as what it attempted. Kept
+     * apart from the loops because {@link #runSync} withholds the baseline on {@code failed > 0},
+     * so miscounting a success as a failure disables deletion reconciliation outright rather than
+     * producing any visible error.
+     */
+    static final class Tally {
+        int uploaded, removedRemote, dropped, failed;
+
+        /**
+         * @param outcome of a POST favorite; DISABLED aborts the run and never reaches here
+         */
+        void recordUpload(WriteOutcome outcome) {
+            if (outcome == WriteOutcome.OK) uploaded++;
+                // Gone upstream: dropping it locally *is* the resolution, so it must not hold the
+                // baseline back the way a genuine failure does.
+            else if (outcome == WriteOutcome.GONE) dropped++;
+            else failed++;
+        }
+
+        /**
+         * @param outcome of a DELETE favorite; a gallery already gone upstream counts as removed
+         */
+        void recordRemoteDelete(WriteOutcome outcome) {
+            if (outcome == WriteOutcome.FAILED) failed++;
+            else removedRemote++;
+        }
+    }
 
     public static final class Progress {
         /**

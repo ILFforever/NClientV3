@@ -86,6 +86,11 @@ public class ImageDownloadUtility {
                 .addListener(new RequestListener<>() {
                     @Override
                     public boolean onLoadFailed(@Nullable GlideException e, @Nullable Object model, @NonNull Target<Drawable> target, boolean isFirstResource) {
+                        // Must drain too. The queue is held back until the first request for a
+                        // gallery reports its extension, and a failure never reports one - so
+                        // without this a single bad first image leaves every later page of that
+                        // gallery queued forever, with nothing to retry or time it out.
+                        drainQueue(context, gallery);
                         return false;
                     }
 
@@ -93,13 +98,7 @@ public class ImageDownloadUtility {
                     public boolean onResourceReady(@NonNull Drawable resource, @NonNull Object model, Target<Drawable> target, @NonNull DataSource dataSource, boolean isFirstResource) {
                         if (gallery != null && !gallery.getGalleryData().getCheckedExt())
                             gallery.getGalleryData().setCheckedExt();
-                        new Handler(context.getMainLooper()).post(() -> {
-                            //noinspection DataFlowIssue
-                            while (imageDownloadQueue.containsKey(gallery) && !imageDownloadQueue.get(gallery).isEmpty()) {
-                                //noinspection DataFlowIssue
-                                imageDownloadQueue.get(gallery).remove(0).run();
-                            }
-                        });
+                        drainQueue(context, gallery);
                         return false;
                     }
                 })
@@ -123,6 +122,25 @@ public class ImageDownloadUtility {
                 //noinspection DataFlowIssue
                 imageDownloadQueue.get(gallery).remove(0).run();
         }
+    }
+
+    /**
+     * Runs everything waiting on a gallery's first request and then forgets the gallery.
+     * <p>
+     * Dropping the entry matters twice over: {@code imageDownloadQueue} is static, so a retained
+     * key keeps a whole {@link Gallery} alive for the life of the process, and an absent key is
+     * also how the next request for that gallery gets to start immediately instead of queueing
+     * behind a probe that has already finished.
+     */
+    private static void drainQueue(Context context, @Nullable Gallery gallery) {
+        new Handler(context.getMainLooper()).post(() -> {
+            List<Runnable> queue = imageDownloadQueue.get(gallery);
+            if (queue == null) return;
+            while (!queue.isEmpty()) queue.remove(0).run();
+            // Two-argument remove: a drained runnable may have queued fresh work under a new list
+            // for this same key, and that must not be dropped along with the old one.
+            imageDownloadQueue.remove(gallery, queue);
+        });
     }
 
     private static Uri getUrlForGallery(Gallery gallery, int page, boolean shouldFull) {

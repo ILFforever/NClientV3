@@ -20,6 +20,7 @@
     <application
         android:name=".components.activities.CrashApplication"
         android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="@xml/backup_content"
         android:icon="@mipmap/ic_launcher"

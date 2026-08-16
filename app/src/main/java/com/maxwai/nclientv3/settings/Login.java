@@ -65,6 +65,40 @@ public class Login {
         }
     }
 
+    /**
+     * Drops a session the server has stopped accepting.
+     * <p>
+     * Local expiry is already covered: both the access_token cookie and the stored user token
+     * carry an expiry and are discarded once it passes. This is the other case - a credential that
+     * still looks valid here but is rejected upstream, because it was revoked, signed out
+     * elsewhere, or because its expiry was the 30-day fallback guess in
+     * {@link #persistentAccessToken} rather than a real {@code exp} claim. Nothing local can
+     * notice that on its own, so without this the app goes on believing it is signed in and every
+     * authenticated write fails silently for good.
+     * <p>
+     * Deliberately narrower than {@link #logout()}: the Cloudflare clearance cookie and the
+     * blacklisted tags are kept, since neither is what expired, and clearing them would force a
+     * fresh challenge and throw away data the user never asked to lose. The sync baseline does go,
+     * because the next sign-in cannot be assumed to be the same account and a baseline belonging
+     * to another one reads as a library-wide deletion.
+     *
+     * @return true if a session was actually dropped; false if it had already gone, so that a run
+     * of rejected requests reports the expiry once instead of once each
+     */
+    public static synchronized boolean onSessionExpired(@NonNull Context context) {
+        if (Global.client == null) return false;
+        if (!hasCookie(LOGIN_COOKIE) && AuthStore.getUserToken(context) == null) return false;
+        LogUtility.d("Session rejected upstream; clearing stored credentials");
+        removeCookie(LOGIN_COOKIE);
+        // removeCookie empties the in-memory cache wholesale; clearSession reloads what is still
+        // persisted, so unrelated cookies survive the removal.
+        ((CustomCookieJar) Global.client.cookieJar()).clearSession();
+        AuthStore.clearUserToken(context);
+        updateUser(null);
+        FavoriteSyncManager.resetBaseline(context);
+        return true;
+    }
+
     public static void clearWebViewCookies() {
         try {
             CookieManager.getInstance().removeAllCookies(null);

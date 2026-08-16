@@ -328,4 +328,5 @@
     <string name="auth_error">驗證錯誤</string>
     <string name="auth_title">生物特徵登入</string>
     <string name="auth_subtitle">使用您的生物特徵憑證登入</string>
+    <string name="favorite_saved_session_expired">工作階段已過期。已儲存至本裝置 — 請重新登入以同步到你的帳號。</string>
 </resources>

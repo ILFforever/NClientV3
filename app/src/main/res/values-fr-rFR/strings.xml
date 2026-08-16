@@ -328,4 +328,5 @@
     <string name="auth_error">Erreur d\'authentification</string>
     <string name="auth_title">Connexion biométrique pour NClient</string>
     <string name="auth_subtitle">Identifier à l\'aide des identifiants biométriques</string>
+    <string name="favorite_saved_session_expired">Votre session a expiré. Enregistré sur cet appareil — reconnectez-vous pour le synchroniser avec votre compte.</string>
 </resources>

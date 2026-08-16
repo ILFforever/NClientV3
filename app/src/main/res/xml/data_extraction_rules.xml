@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Android 12+ replacement for fullBackupContent. Without this file the platform defaults to taking
+everything, so the exclusions in backup_content.xml would silently stop applying on newer devices.
+Keep the two in sync.
+
+device-transfer repeats the same exclusions: it is a direct device-to-device copy rather than a
+cloud upload, but it still duplicates credentials onto hardware that never authenticated, and a
+transferred cookie session is bound to the old device anyway.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude
+            domain="sharedpref"
+            path="Auth.xml" />
+        <exclude
+            domain="sharedpref"
+            path="UserToken.xml" />
+        <exclude
+            domain="sharedpref"
+            path="Login.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude
+            domain="sharedpref"
+            path="Auth.xml" />
+        <exclude
+            domain="sharedpref"
+            path="UserToken.xml" />
+        <exclude
+            domain="sharedpref"
+            path="Login.xml" />
+    </device-transfer>
+</data-extraction-rules>

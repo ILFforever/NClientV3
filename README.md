@@ -14,11 +14,15 @@ Releases: <https://github.com/ILFforever/NClientV3/releases>
 
 
 ## STUFF ADDED
-- Favorite Multi page randomizer (Instead of the original which randomizes only entries in current page).
-- Fix for Random button crashing app. (By adding error return on extToString())
 
-(I do not intent to update nor maintain this repo regularly but it does work as of 04/09/2025)
-(This is my first time actually working with Android Studio, so if any functionality breaks I'm super duper sorry)
+### v4.5.0
+
+- Added unified favorites with two-way syncing between the app and website.
+- Added user profiles and improved comments.
+- Improved the Favorites toolbar, reader, image loading, and sign-in experience.
+- Added general stability, compatibility, and performance improvements.
+
+Earlier additions include the multi-page favorite randomizer and a fix for crashes caused by unsupported gallery file extensions.
 
 ## Migrate from original NClientV2 to NClientV3
 

@@ -328,4 +328,5 @@
     <string name="auth_error">Authentication error</string>
     <string name="auth_title">Biometric login for NClient</string>
     <string name="auth_subtitle">Log in using your biometric credential</string>
+    <string name="favorite_saved_session_expired">Термін дії сеансу минув. Збережено на цьому пристрої — увійдіть знову, щоб синхронізувати з обліковим записом.</string>
 </resources>
